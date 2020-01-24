@@ -1,0 +1,21 @@
+BasedOnStyle: Microsoft
+
+ColumnLimit: 0
+SpaceBeforeParens: Never
+IndentPPDirectives: AfterHash
+
+AllowShortBlocksOnASingleLine: true
+AllowShortFunctionsOnASingleLine: true
+
+IndentCaseLabels: false
+AccessModifierOffset: -4
+
+BraceWrapping:
+    AfterExternBlock: false
+
+SpaceBeforeCtorInitializerColon: true
+ConstructorInitializerIndentWidth: 4
+BreakConstructorInitializers: BeforeComma
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+BreakBeforeInheritanceComma: false
+BreakInheritanceList: BeforeComma
