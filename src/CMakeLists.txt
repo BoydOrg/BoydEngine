@@ -8,6 +8,8 @@ target_include_directories(BoydEngine PUBLIC
 )
 
 add_subdirectory(3rdparty/)
-target_link_libraries(BoydEngine PUBLIC
+
+target_link_libraries(${PROJECT_NAME} PUBLIC
     EnTT::EnTT
+    raylib
 )
