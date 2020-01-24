@@ -52,6 +52,7 @@ public:
 
         // TODO: Make the buffer thread-local?
         static thread_local fmt::memory_buffer buffer;
+        buffer.clear();
         fmt::format_to(buffer, fmt, std::forward<Args>(fmtArgs)...);
 
         // TODO: Ability to register/deregister log streams as needed
