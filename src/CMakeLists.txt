@@ -2,14 +2,25 @@ add_executable(BoydEngine WIN32
     Main.cc
 )
 
+add_subdirectory(3rdparty/)
+target_link_libraries(${PROJECT_NAME} PUBLIC
+    EnTT::EnTT
+    raylib
+)
+
+# Generate BoydBuildConfig.hh by compiling & running BoydBuildUtil
+add_executable(BoydBuildUtil BoydBuildUtil.cc)
+add_custom_target(runBoydBuildUtil
+    COMMAND $<TARGET_FILE:BoydBuildUtil> ${CMAKE_CURRENT_BINARY_DIR}/BoydBuildConfig.hh
+    COMMENT "Run BoydBuildUtil"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+add_dependencies(runBoydBuildUtil BoydBuildUtil)
+add_dependencies(BoydEngine runBoydBuildUtil)
+
+# Then configure BoydEngine.hh via CMake
 configure_file(BoydEngine.hh.in BoydEngine.hh)
 target_include_directories(BoydEngine PUBLIC
     "${CMAKE_CURRENT_BINARY_DIR}"
 )
 
-add_subdirectory(3rdparty/)
-
-target_link_libraries(${PROJECT_NAME} PUBLIC
-    EnTT::EnTT
-    raylib
-)
