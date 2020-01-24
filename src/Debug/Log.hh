@@ -57,7 +57,9 @@ public:
 
         // TODO: Ability to register/deregister log streams as needed
         char levelChar = LEVEL_NAMES[unsigned(level) - unsigned(LogLevel::Min)];
-        std::clog << file << ':' << line << " [" << levelChar << "] " << buffer.data() << std::endl;
+        std::clog << file << ':' << line << " [" << levelChar << "] ";
+        std::clog.write(buffer.data(), buffer.size());
+        std::clog << std::endl;
     }
 };
 
