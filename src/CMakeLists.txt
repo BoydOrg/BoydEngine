@@ -1,6 +1,9 @@
 add_executable(BoydEngine WIN32
     Main.cc
 )
+set_target_properties(BoydEngine PROPERTIES
+    DEFINE_SYMBOL BOYD_DLL_EXPORTS
+)
 
 add_subdirectory(3rdparty/)
 target_link_libraries(${PROJECT_NAME} PUBLIC
