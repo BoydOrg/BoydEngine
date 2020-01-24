@@ -85,5 +85,10 @@ luac.out
 .ninja_deps
 .ninja_log
 
+
+### VSCode ###
+.vscode/launch.json
+build/
+
 # End of https://www.gitignore.io/api/lua,c++,cmake,ninja
 
