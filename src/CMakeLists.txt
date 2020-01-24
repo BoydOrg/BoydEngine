@@ -6,6 +6,7 @@ add_subdirectory(3rdparty/)
 target_link_libraries(${PROJECT_NAME} PUBLIC
     EnTT::EnTT
     raylib
+    fmt::fmt
 )
 
 # Generate BoydBuildConfig.hh by compiling & running BoydBuildUtil
