@@ -1,8 +1,8 @@
 add_executable(BoydEngine WIN32
-    src/Main.cc
+    Main.cc
 )
 
-configure_file(src/BoydEngine.hh.in src/BoydEngine.hh)
+configure_file(BoydEngine.hh.in BoydEngine.hh)
 target_include_directories(BoydEngine PUBLIC
     "${CMAKE_CURRENT_BINARY_DIR}"
 )
