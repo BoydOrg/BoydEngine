@@ -1,12 +1,13 @@
 #include <cstdio>
 
 #include "BoydEngine.hh"
+#include "Debug/Log.hh"
 
 #include "raylib.h"
 
 int main(void)
 {
-    printf("BoydEngine v%d.%d\n", BoydEngine_VERSION_MAJOR, BoydEngine_VERSION_MINOR);
+    BOYD_LOG(Debug, "BoydEngine v{}.{}", BoydEngine_VERSION_MAJOR, BoydEngine_VERSION_MINOR);
 
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -15,11 +16,11 @@ int main(void)
 
     InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
 
-    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
+    SetTargetFPS(60); // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
     // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
+    while(!WindowShouldClose()) // Detect window close button or ESC key
     {
         // Update
         //----------------------------------------------------------------------------------
@@ -30,9 +31,9 @@ int main(void)
         //----------------------------------------------------------------------------------
         BeginDrawing();
 
-            ClearBackground(RAYWHITE);
+        ClearBackground(RAYWHITE);
 
-            DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
+        DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
@@ -40,7 +41,7 @@ int main(void)
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
-    CloseWindow();        // Close window and OpenGL context
+    CloseWindow(); // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
 
     return 0;
