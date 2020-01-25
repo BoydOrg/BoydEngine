@@ -45,21 +45,23 @@ public:
 
     /// -- Do not use this directly - use the `BOYD_LOG()` macro! --
     /// Logs a message in fmtlib format as it came from a certain file:line pair.
+    /// Thread-safe; all messages are stored in a thread-local buffer.
     template <typename... Args>
     void log(LogLevel level, const char *file, unsigned line, fmt::basic_string_view<char> fmt, Args &&... fmtArgs)
     {
         static const char LEVEL_NAMES[] = {'D', 'I', 'W', 'E', 'C'};
 
-        // TODO: Make the buffer thread-local?
-        static thread_local fmt::memory_buffer buffer;
+        char levelChar = LEVEL_NAMES[unsigned(level) - unsigned(LogLevel::Min)];
+
+        // NOTE: Buffers are thread-local!
+        static thread_local fmt::basic_memory_buffer<char, 512> buffer;
         buffer.clear();
+        fmt::format_to(buffer, FMT_STRING("{}:{} [{}] "), file, line, levelChar);
         fmt::format_to(buffer, fmt, std::forward<Args>(fmtArgs)...);
+        buffer.push_back('\n');
 
         // TODO: Ability to register/deregister log streams as needed
-        char levelChar = LEVEL_NAMES[unsigned(level) - unsigned(LogLevel::Min)];
-        std::clog << file << ':' << line << " [" << levelChar << "] ";
         std::clog.write(buffer.data(), buffer.size());
-        std::clog << std::endl;
     }
 };
 
