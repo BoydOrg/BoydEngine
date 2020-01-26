@@ -3,6 +3,7 @@ add_executable(BoydEngine WIN32
 )
 set_target_properties(BoydEngine PROPERTIES
     DEFINE_SYMBOL BOYD_DLL_EXPORTS
+    ENABLE_EXPORTS YES
 )
 
 add_subdirectory(3rdparty/)
@@ -28,3 +29,5 @@ target_include_directories(BoydEngine PUBLIC
     "${CMAKE_CURRENT_BINARY_DIR}"
 )
 
+# Compile all modules
+add_subdirectory(Modules/)
