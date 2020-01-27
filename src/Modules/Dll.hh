@@ -20,16 +20,31 @@
 
 namespace boyd{
 
+#ifdef BOYD_PLATFORM_POSIX
+        constexpr int _prefixSkip = 3;
+#else
+        constexpr int _prefixSkip = 0;
+#endif    
+
+/// Given a library path, extract the name of the module
+/// `path`: the path of the module. The extracted module will be the name of
+///         the module without the extension and possibly the prefix
+std::string GetModuleName(const std::filesystem::path& path)
+{
+    std::filesystem::path filename = path.filename();
+    return filename.stem().string().substr(_prefixSkip);
+}
+
 /// A wrapper over a shared library
 class Dll {
     std::string initFuncName;
     std::string updateFuncName;
     std::string haltFuncName;
 
-    void* handle;
-    void* (*initFunc) (void);
-    void  (*updateFunc) (void*);
-    void  (*haltFunc) (void*);
+    void* handle {nullptr};
+    void* (*initFunc) (void) {nullptr};
+    void  (*updateFunc) (void*) {nullptr};
+    void  (*haltFunc) (void*) {nullptr};
     void *data;
 
     template<typename FuncType>
@@ -58,21 +73,20 @@ public:
     ///
     /// Note: this wrapper strictly forbids copy constructors.
     const std::filesystem::path filepath;
-    const std::string filename;
     std::string modname;
 
     Dll(std::filesystem::path filepath)
         : filepath{filepath},
-          filename{filepath.filename()}
+          modname{GetModuleName(filepath)}
     {
-        // Take the filename only, strip the "lib" prefix and remove the extension
-        modname = filename.substr(3, filename.size() - 3 - filepath.extension().string().size());
+        BOYD_LOG(Info, "Loading module {}", modname);
+        BOYD_LOG(Debug, "Trying to access {}", filepath.string());
 
         initFuncName     = std::string{"BoydInit_"} + modname;
         updateFuncName   = std::string{"BoydUpdate_"} + modname;
         haltFuncName     = std::string{"BoydHalt_"} + modname;
 
-        ReloadSymbols();
+        Reload();
     }
 
     // Avoid spurious problems when sharing libraries.
@@ -105,17 +119,31 @@ public:
 
     ~Dll()
     {
-        haltFunc(data);
-        dlclose(handle);
+        if(haltFunc)
+        {
+            haltFunc(data);
+            data = nullptr;
+        }
+        if (handle)
+        {
+            dlclose(handle);
+            handle = nullptr;
+        }
+        // invalidate handle and function pointers
+        initFunc = nullptr;
+        updateFunc = nullptr;
+        haltFunc = nullptr;
     }
     
-    /// Call the Update function inside the module
+    /// Call the Update function inside the module.
     void Update()
     {
         updateFunc(data);
     }
 
-    /// Reload the module by reloading all the exported names
+    /// Reload the module by reloading all the exported names.
+    /// Note that this method is not thread-safe! Plase avoid calling any
+    /// symbol function during a `Reload()`.
     void Reload()
     {
         (void) this->~Dll();

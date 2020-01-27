@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <unordered_map>
+#include <mutex>
 
 #ifdef BOYD_PLATFORM_POSIX
 #   include <sys/time.h>
@@ -25,57 +26,57 @@ using std::filesystem::path;
 using BoydPriorityModule = pair<int, Dll>;
 
 static vector<BoydPriorityModule> modules;
-static std::unordered_map<string, vector<string>> requiredBy;
 
 static std::thread* listener;
 static bool quitPoller = false;
+static std::mutex lockUpdates;
 
-void RegisterModule(const string& moduleName, int priorityNo,
-                    const vector<string>& dependencies)
+// Basic insertion sort to sort the modules internally
+static void InsertionSortLast()
+{
+    for (auto curElem = modules.end() - 1; curElem != modules.begin(); curElem--)
+        if (curElem->first > (curElem - 1)->first)
+            std::swap(*curElem, *(curElem - 1));
+}
+
+void RegisterModule(const string& moduleName, int priorityNo)
 {
 #ifdef BOYD_PLATFORM_POSIX
     path modulePath = string{"lib/"} + moduleName;
 #else
     path modulePath{moduleName};
 #endif
-    modules.emplace_back(std::make_pair(priorityNo, Dll(modulePath)));
-    std::sort(modules.begin(), modules.end(),
-        [](const BoydPriorityModule& a, const BoydPriorityModule& b)
-        {
-            return a.first < b.first;
-        });
-
-    // Build a "depend-from" tree.
-    requiredBy[modulePath.c_str()] = {};
-    
-    for(const string& dependency: dependencies)
-        requiredBy[dependency].push_back(modulePath.c_str());
+    modules.emplace_back(priorityNo, modulePath);
+    InsertionSortLast();
 }
 
 void UpdateModules()
 {
+    // Avoid updating in case of a reload
+    std::unique_lock<std::mutex> lockGuard(lockUpdates);
     for(auto& module: modules)
         module.second.Update();
 }
 
 void ReloadModule(const string& moduleName)
 {
+    std::unique_lock<std::mutex> lockGuard(lockUpdates);
     // Find the first module that matches the name
     auto it = std::find_if(modules.begin(), modules.end(),
         [&moduleName](const BoydPriorityModule& a)
         {
-            return a.second.filename == moduleName;
+            return a.second.modname == moduleName;
         });
 
     if (it == modules.end())
+    {
         BOYD_LOG(Warn, "The module {} was not registered - not reloading it", moduleName);
+    }
 
     // Recursively reload the dependencies
     else
     {
         it->second.Reload();
-        for(const string& dependent: requiredBy[moduleName])
-            ReloadModule(dependent);
     }
 }
 
@@ -104,8 +105,7 @@ static void EventPoller(int inotifyFd, int waitFor)
         ret = select (inotifyFd+1, &rfds, nullptr, nullptr, &interval);
         if (ret < 0)
         {
-            BOYD_LOG(Warn, "Could not enable use select(): ");
-            perror("select");
+            BOYD_LOG(Warn, "Could not enable use select(): {}", strerror(errno));
         } else if (!ret)
             // check next time
             continue;
@@ -116,7 +116,7 @@ static void EventPoller(int inotifyFd, int waitFor)
 
             if (eventBufferSize < 0)
             {
-                perror("read");
+                BOYD_LOG(Warn, "Could not read(): {}", strerror(errno));
                 continue;
             }
             while (bufferCursor < eventBufferSize)
@@ -127,8 +127,9 @@ static void EventPoller(int inotifyFd, int waitFor)
                 {
                     path modifiedModule = event->name;
                     BOYD_LOG(Info, "{} has changed, reloading...", modifiedModule.string());
-                    ReloadModule(modifiedModule.filename().string());
+                    ReloadModule(GetModuleName(modifiedModule));
                 }
+                bufferCursor += EVENT_SIZE + event->len;
             }
         }
     }
@@ -142,21 +143,19 @@ void SetListener(const path& modulePath, int waitFor)
     inotify_fd = inotify_init();
     if (inotify_fd < 0)
     {
-        BOYD_LOG(Warn, "Error while setting up inotify: ");
-        perror("inotify_init");
+        BOYD_LOG(Warn, "Error while setting up inotify: {}", strerror(errno));
     }
     else
     {
         inotify_watcher = inotify_add_watch(inotify_fd, modulePath.c_str(), IN_CLOSE_WRITE);
         if (inotify_watcher < 0)
         {
-            BOYD_LOG(Warn, "Error while setting up inotify: ");
-            perror("inotify_add_watch"); 
+            BOYD_LOG(Warn, "Error while setting up inotify: {}", strerror(errno));
         }
         else
         {
             quitPoller = false;
-            listener = new std::thread(EventPoller, inotify_fd, waitFor);
+            listener = new std::thread(EventPoller, inotify_fd, 1000 * waitFor);
         }
     }
 #else
@@ -166,7 +165,7 @@ void SetListener(const path& modulePath, int waitFor)
 
 void CloseListener()
 {
-    quitPoller = false;
+    quitPoller = true;
     listener->join();
     delete listener;
     listener = nullptr;

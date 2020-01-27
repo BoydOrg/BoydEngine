@@ -2,6 +2,8 @@
 
 #include "BoydEngine.hh"
 #include "Debug/Log.hh"
+#include "Modules/Loader.hh"
+
 using namespace boyd;
 
 #include "raylib.h"
@@ -39,9 +41,14 @@ int main(void)
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
+    RegisterModule("libGfx.so", 99);
+    // TODO: This is not portable 
+    SetListener("lib/", 100);
+
     // Main game loop
     while(!WindowShouldClose()) // Detect window close button or ESC key
     {
+        UpdateModules();
         // Update
         //----------------------------------------------------------------------------------
         // TODO: Update your variables here
@@ -63,6 +70,8 @@ int main(void)
     //--------------------------------------------------------------------------------------
     CloseWindow(); // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
+
+    CloseListener();
 
     return 0;
 }
