@@ -2,6 +2,7 @@
 
 #include "BoydEngine.hh"
 #include "Debug/Log.hh"
+#include "Scripting/Lua.hh"
 using namespace boyd;
 
 #include "raylib.h"

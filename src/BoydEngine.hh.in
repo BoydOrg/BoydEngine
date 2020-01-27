@@ -1,3 +1,7 @@
 // Link CMake's engine version to the source code
 #define BoydEngine_VERSION_MAJOR @BoydEngine_VERSION_MAJOR@
 #define BoydEngine_VERSION_MINOR @BoydEngine_VERSION_MINOR@
+
+// What type of Lua?
+#cmakedefine BOYD_LUA_VANILLA
+#cmakedefine BOYD_LUA_LUAJIT
