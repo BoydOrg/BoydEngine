@@ -17,3 +17,6 @@
 [submodule "src/3rdparty/LuaJIT"]
 	path = src/3rdparty/LuaJIT
 	url = https://luajit.org/git/luajit-2.0.git
+[submodule "src/3rdparty/lua"]
+	path = src/3rdparty/lua
+	url = https://github.com/lua/lua

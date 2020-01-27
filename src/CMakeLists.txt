@@ -13,7 +13,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     raylib
     fmt::fmt
     LuaBridge
-    LuaJIT
+    ${BOYD_LUA}
 )
 
 # Generate BoydBuildConfig.hh by compiling & running BoydBuildUtil

@@ -16,6 +16,4 @@ add_subdirectory(fmt/)
 set(LUABRIDGE_TESTING OFF CACHE BOOL "" FORCE)
 add_subdirectory(luabridge/)
 
-# LuaJIT - http://luajit.org/download.html - License: MIT
-# CMake script: BSD3 licensed, https://github.com/OpenXRay/xray-16
-include(LuaJIT.cmake)
+include(Lua.cmake)
