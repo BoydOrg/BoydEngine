@@ -1,5 +1,6 @@
 add_executable(BoydEngine WIN32
     Main.cc
+    Modules/Loader.cc
 )
 set_target_properties(BoydEngine PROPERTIES
     DEFINE_SYMBOL BOYD_DLL_EXPORTS
