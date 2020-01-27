@@ -11,3 +11,9 @@
 [submodule "src/3rdparty/luabridge"]
 	path = src/3rdparty/luabridge
 	url = https://github.com/vinniefalco/LuaBridge
+[submodule "src/3rdparty/luajit-2.0"]
+	path = src/3rdparty/luajit-2.0
+	url = https://luajit.org/git/luajit-2.0.git
+[submodule "src/3rdparty/LuaJIT"]
+	path = src/3rdparty/LuaJIT
+	url = https://luajit.org/git/luajit-2.0.git
