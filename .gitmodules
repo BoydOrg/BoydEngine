@@ -8,3 +8,6 @@
 [submodule "src/3rdparty/fmt"]
 	path = src/3rdparty/fmt
 	url = https://github.com/fmtlib/fmt
+[submodule "src/3rdparty/luabridge"]
+	path = src/3rdparty/luabridge
+	url = https://github.com/vinniefalco/LuaBridge

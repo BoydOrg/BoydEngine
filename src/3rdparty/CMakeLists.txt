@@ -11,3 +11,7 @@ add_subdirectory(raylib/)
 
 # fmtlib - https://github.com/fmtlib/fmt - License: modified MIT
 add_subdirectory(fmt/)
+
+# LuaBridge - https://github.com/vinniefalco/LuaBridge - License: modified MIT
+set(LUABRIDGE_TESTING OFF CACHE BOOL "" FORCE)
+add_subdirectory(luabridge/)
