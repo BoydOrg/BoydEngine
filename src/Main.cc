@@ -28,7 +28,7 @@ static void raylibLog(int msgType, const char *fmt, va_list args)
 
 int main(void)
 {
-    BOYD_LOG(Debug, "BoydEngine v{}.{}", BoydEngine_VERSION_MAJOR, BoydEngine_VERSION_MINOR);
+    BOYD_LOG(Debug, "BoydEngine v{}.{}", BOYD_VERSION_MAJOR, BOYD_VERSION_MINOR);
     SetTraceLogCallback(raylibLog);
 
     // Initialization
@@ -42,7 +42,6 @@ int main(void)
     //--------------------------------------------------------------------------------------
 
     RegisterModule("libGfx.so", 99);
-    // TODO: This is not portable 
     SetListener("lib/", 100);
 
     // Main game loop

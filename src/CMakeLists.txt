@@ -24,11 +24,15 @@ add_custom_target(runBoydBuildUtil
 add_dependencies(runBoydBuildUtil BoydBuildUtil)
 add_dependencies(BoydEngine runBoydBuildUtil)
 
-# Then configure BoydEngine.hh via CMake
-configure_file(BoydEngine.hh.in BoydEngine.hh)
 target_include_directories(BoydEngine PUBLIC
     "${CMAKE_CURRENT_BINARY_DIR}"
 )
 
+
 # Compile all modules
+set(BOYD_MODULES "" PARENT_SCOPE)
+set(BOYD_MODULES_MACRO "" PARENT_SCOPE)
 add_subdirectory(Modules/)
+
+# Then configure BoydEngine.hh via CMake
+configure_file(BoydEngine.hh.in BoydEngine.hh)
