@@ -9,10 +9,13 @@ set_target_properties(BoydEngine PROPERTIES
 )
 
 add_subdirectory(3rdparty/)
+
 target_link_libraries(${PROJECT_NAME} PUBLIC
     EnTT::EnTT
     raylib
     fmt::fmt
+    glm
+    OpenAL
     LuaBridge
     ${BOYD_LUA}
 )

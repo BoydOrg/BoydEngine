@@ -1,6 +1,9 @@
 #include "../../Core/Platform.hh"
 #include "../../Debug/Log.hh"
 
+#include <AL/al.h>
+#include <tinywav.h>
+
 /// TODO: add state transfer
 struct BoydAudioState {
     /// TODO: add raylib core stuff...
