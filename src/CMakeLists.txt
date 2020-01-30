@@ -1,5 +1,6 @@
 add_executable(BoydEngine WIN32
     Main.cc
+    Core/GameState.cc
     Modules/Loader.cc
 )
 set_target_properties(BoydEngine PROPERTIES

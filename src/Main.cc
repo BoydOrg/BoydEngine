@@ -1,6 +1,8 @@
 #include <cstdio>
+#include <memory>
 
 #include "BoydEngine.hh"
+#include "Core/GameState.hh"
 #include "Debug/Log.hh"
 #include "Scripting/Lua.hh"
 using namespace boyd;
@@ -29,6 +31,9 @@ int main(void)
 {
     BOYD_LOG(Debug, "BoydEngine v{}.{}", BoydEngine_VERSION_MAJOR, BoydEngine_VERSION_MINOR);
     SetTraceLogCallback(raylibLog);
+
+    // Make sure game state is inited
+    (void)GameStateManager::Instance();
 
     // Initialization
     //--------------------------------------------------------------------------------------
