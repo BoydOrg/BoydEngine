@@ -20,3 +20,7 @@ add_subdirectory(glm/)
 set(ALSOFT_BACKEND_SDL2 OFF CACHE BOOL "" FORCE) # disable SDL2 mixer
 set(ALSOFT_EXAMPLES OFF CACHE BOOL "" FORCE)     # Examples use SDL1 which cause us redefinition issues with raylib
 add_subdirectory(openal-soft)
+
+# Tinywav - https://github.com/mhroth/tinywav - License: MIT
+add_library(tinywav STATIC tinywav/tinywav.c)
+target_include_directories(tinywav PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/tinywav")
