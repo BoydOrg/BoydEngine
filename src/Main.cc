@@ -73,7 +73,9 @@ int main(void)
     CloseWindow(); // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
 
+#ifdef BOYD_HOT_RELOADING
     CloseListener();
+#endif
 
     return 0;
 }

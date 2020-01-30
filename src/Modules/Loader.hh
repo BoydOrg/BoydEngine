@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Core/Platform.hh"
 #include "Dll.hh"
 #include <string>
 #include <vector>
@@ -33,11 +34,12 @@ void RegisterModule(const string& moduleName, int priorityNo);
 extern std::vector<BoydModule> modules;
 
 #define BOYD_MODULE(name, priority) \
-    void* BoydInit_##name (void); \
-    void* BoydUpdate_##name (void); \
-    void* BoydHalt_##name (void); \
+    BOYD_API void* BoydInit_##name (void); \
+    BOYD_API void BoydUpdate_##name (void*); \
+    BOYD_API void BoydHalt_##name (void*); \
     \
     modules.push_back({ \
+        #name, \
         BoydInit_##name, \
         BoydUpdate_##name, \
         BoydHalt_##name, \

@@ -171,6 +171,6 @@ void CloseListener()
 
 #else
 
-vector<Dll> modules;
+vector<BoydModule> modules;
 #endif // #ifdef BOYD_HOT_RELOADING
 } // namespace boyd
