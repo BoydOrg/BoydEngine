@@ -8,3 +8,6 @@
 [submodule "src/3rdparty/fmt"]
 	path = src/3rdparty/fmt
 	url = https://github.com/fmtlib/fmt
+[submodule "glm"]
+	path = src/3rdparty/glm
+	url = https://github.com/g-truc/glm

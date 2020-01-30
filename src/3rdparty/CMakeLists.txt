@@ -11,3 +11,6 @@ add_subdirectory(raylib/)
 
 # fmtlib - https://github.com/fmtlib/fmt - License: modified MIT
 add_subdirectory(fmt/)
+
+# glm - https://github.com/g-truc/glm
+add_subdirectory(glm/)
