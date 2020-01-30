@@ -1,5 +1,6 @@
 add_executable(BoydEngine WIN32
     Main.cc
+    Core/GameState.cc
     Modules/Loader.cc
 )
 set_target_properties(BoydEngine PROPERTIES
@@ -15,6 +16,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     fmt::fmt
     glm
     OpenAL
+    LuaBridge
+    ${BOYD_LUA}
 )
 
 # Generate BoydBuildConfig.hh by compiling & running BoydBuildUtil

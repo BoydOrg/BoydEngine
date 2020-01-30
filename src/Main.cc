@@ -1,15 +1,19 @@
 #include <cstdio>
+#include <memory>
 
-#include "Debug/Log.hh"
 #include "BoydEngine.hh"
+#include "Core/GameState.hh"
+#include "Debug/Log.hh"
+#include "Scripting/Lua.hh"
 
+// clang-format off
 #define BOYD_MODULE(name, priority) \
     extern "C" { \
-        BOYD_API void* BoydInit_##name(void); \
-        BOYD_API void  BoydUpdate_##name(void* ); \
+        BOYD_API void *BoydInit_##name(void); \
+        BOYD_API void  BoydUpdate_##name(void *); \
         BOYD_API void  BoydHalt_##name(void *); \
     }
-
+// clang-format on
 BOYD_MODULES_LIST()
 
 #undef BOYD_MODULE
@@ -44,6 +48,9 @@ int main(void)
 
     BOYD_MODULES_LIST();
     SetTraceLogCallback(raylibLog);
+
+    // Make sure game state is inited
+    (void)GameStateManager::Instance();
 
     // Initialization
     //--------------------------------------------------------------------------------------

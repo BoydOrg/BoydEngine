@@ -20,3 +20,10 @@ add_subdirectory(glm/)
 set(ALSOFT_BACKEND_SDL2 OFF CACHE BOOL "" FORCE) # disable SDL2 mixer
 set(ALSOFT_EXAMPLES OFF CACHE BOOL "" FORCE)     # Examples use SDL1 which cause us redefinition issues with raylib
 add_subdirectory(openal-soft)
+
+# LuaBridge - https://github.com/vinniefalco/LuaBridge - License: modified MIT
+set(LUABRIDGE_TESTING OFF CACHE BOOL "" FORCE)
+add_subdirectory(luabridge/)
+
+# Lua or LuaJIT - License: MIT 
+include(Lua.cmake)
