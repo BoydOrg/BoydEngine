@@ -2,31 +2,31 @@
 #include "../../Debug/Log.hh"
 
 /// TODO: add state transfer
-struct BoydGfxState {
+struct BoydAudioState {
     /// TODO: add raylib core stuff...
 };
 
-inline BoydGfxState* GetState(void* state)
+inline BoydAudioState* GetState(void* state)
 {
-    return reinterpret_cast<BoydGfxState*>(state);
+    return reinterpret_cast<BoydAudioState*>(state);
 }
 
 
 extern "C" {
-    BOYD_API void* BoydInit_Gfx()
+    BOYD_API void* BoydInit_Audio()
     {
-        BOYD_LOG(Info, "Starting Gfx module");
-        return new BoydGfxState;
+        BOYD_LOG(Info, "Starting Audio module");
+        return new BoydAudioState;
     }
 
-    BOYD_API void BoydUpdate_Gfx(void* state)
+    BOYD_API void BoydUpdate_Audio(void* state)
     {
         BOYD_LOG(Info, "Update2...");
     }
 
-    BOYD_API void BoydHalt_Gfx(void* state)
+    BOYD_API void BoydHalt_Audio(void* state)
     {
-        BOYD_LOG(Info, "Halting Gfx module");
+        BOYD_LOG(Info, "Halting AudioState module");
         delete GetState(state);
     }
 }

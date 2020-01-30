@@ -1,5 +1,4 @@
 #include "Loader.hh"
-#include "Dll.hh"
 
 #include <thread>
 #include <utility>
@@ -20,52 +19,52 @@ namespace boyd {
 
 using std::string;
 using std::vector;
-using std::pair;
 using std::filesystem::path;
 
-using BoydPriorityModule = pair<int, Dll>;
+void InsertionSortLast()
+{
+    for(auto curElem = modules.end() - 1;
+        curElem != modules.begin() && *curElem < *(curElem - 1);
+        --curElem)
+            std::swap(*curElem, *(curElem - 1));
+}
 
-static vector<BoydPriorityModule> modules;
 
+#ifdef BOYD_HOT_RELOADING
 static std::thread* listener;
 static bool quitPoller = false;
 static std::mutex lockUpdates;
 
-// Basic insertion sort to sort the modules internally
-static void InsertionSortLast()
-{
-    for (auto curElem = modules.end() - 1; curElem != modules.begin(); curElem--)
-        if (curElem->first > (curElem - 1)->first)
-            std::swap(*curElem, *(curElem - 1));
-}
+vector<Dll> modules;
 
 void RegisterModule(const string& moduleName, int priorityNo)
 {
-#ifdef BOYD_PLATFORM_POSIX
-    path modulePath = string{"lib/"} + moduleName;
-#else
-    path modulePath{moduleName};
-#endif
-    modules.emplace_back(priorityNo, modulePath);
+    modules.emplace_back(moduleName, priorityNo);
     InsertionSortLast();
 }
 
+#endif
+
+
 void UpdateModules()
 {
+#ifdef BOYD_HOT_RELOADING
     // Avoid updating in case of a reload
     std::unique_lock<std::mutex> lockGuard(lockUpdates);
+#endif
     for(auto& module: modules)
-        module.second.Update();
+        module.Update();
 }
 
+#ifdef BOYD_HOT_RELOADING
 void ReloadModule(const string& moduleName)
 {
     std::unique_lock<std::mutex> lockGuard(lockUpdates);
     // Find the first module that matches the name
     auto it = std::find_if(modules.begin(), modules.end(),
-        [&moduleName](const BoydPriorityModule& a)
+        [&moduleName](const Dll& a)
         {
-            return a.second.modname == moduleName;
+            return a.modname == moduleName;
         });
 
     if (it == modules.end())
@@ -73,10 +72,9 @@ void ReloadModule(const string& moduleName)
         BOYD_LOG(Warn, "The module {} was not registered - not reloading it", moduleName);
     }
 
-    // Recursively reload the dependencies
     else
     {
-        it->second.Reload();
+        it->Reload();
     }
 }
 
@@ -127,14 +125,14 @@ static void EventPoller(int inotifyFd, int waitFor)
                 {
                     path modifiedModule = event->name;
                     BOYD_LOG(Info, "{} has changed, reloading...", modifiedModule.string());
-                    ReloadModule(GetModuleName(modifiedModule));
+                    ReloadModule(Dll::GetModuleName(modifiedModule));
                 }
                 bufferCursor += EVENT_SIZE + event->len;
             }
         }
     }
 }
-#endif
+#endif // #ifdef BOYD_PLATFORM_POSIX
 
 void SetListener(const path& modulePath, int waitFor)
 {
@@ -160,7 +158,7 @@ void SetListener(const path& modulePath, int waitFor)
     }
 #else
     BOYD_LOG(Warn, "Hot reloading and listeners are not yet supported on windows");
-#endif
+#endif // #ifdef BOYD_PLATFORM_POSIX
 }
 
 void CloseListener()
@@ -170,4 +168,9 @@ void CloseListener()
     delete listener;
     listener = nullptr;
 }
+
+#else
+
+vector<Dll> modules;
+#endif // #ifdef BOYD_HOT_RELOADING
 } // namespace boyd

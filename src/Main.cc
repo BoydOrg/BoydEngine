@@ -1,8 +1,8 @@
 #include <cstdio>
 
-#include "BoydEngine.hh"
 #include "Debug/Log.hh"
 #include "Modules/Loader.hh"
+#include "BoydEngine.hh"
 
 using namespace boyd;
 
@@ -29,6 +29,8 @@ static void raylibLog(int msgType, const char *fmt, va_list args)
 int main(void)
 {
     BOYD_LOG(Debug, "BoydEngine v{}.{}", BOYD_VERSION_MAJOR, BOYD_VERSION_MINOR);
+
+    BOYD_MODULES_LIST();
     SetTraceLogCallback(raylibLog);
 
     // Initialization
@@ -41,8 +43,9 @@ int main(void)
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
-    RegisterModule("libGfx.so", 99);
+#ifdef BOYD_HOT_RELOADING
     SetListener("lib/", 100);
+#endif
 
     // Main game loop
     while(!WindowShouldClose()) // Detect window close button or ESC key
