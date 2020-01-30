@@ -24,6 +24,8 @@ extern std::vector<Dll> modules;
 /// `priorityNo` - the order of which the module should be executed
 ///                during an update
 void RegisterModule(const string& moduleName, int priorityNo);
+
+#define BOYD_DELCARE_MODULES()
 #define BOYD_MODULE(name, priority) RegisterModule(#name, priority);
 
 #else
@@ -34,10 +36,6 @@ void RegisterModule(const string& moduleName, int priorityNo);
 extern std::vector<BoydModule> modules;
 
 #define BOYD_MODULE(name, priority) \
-    BOYD_API void* BoydInit_##name (void); \
-    BOYD_API void BoydUpdate_##name (void*); \
-    BOYD_API void BoydHalt_##name (void*); \
-    \
     modules.push_back({ \
         #name, \
         BoydInit_##name, \

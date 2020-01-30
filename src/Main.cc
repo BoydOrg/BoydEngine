@@ -1,8 +1,20 @@
 #include <cstdio>
 
 #include "Debug/Log.hh"
-#include "Modules/Loader.hh"
 #include "BoydEngine.hh"
+
+#define BOYD_MODULE(name, priority) \
+    extern "C" { \
+        BOYD_API void* BoydInit_##name(void); \
+        BOYD_API void  BoydUpdate_##name(void* ); \
+        BOYD_API void  BoydHalt_##name(void *); \
+    }
+
+BOYD_MODULES_LIST()
+
+#undef BOYD_MODULE
+
+#include "Modules/Loader.hh" // this redefines BOYD_MODULE
 
 using namespace boyd;
 
