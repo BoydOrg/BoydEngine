@@ -5,6 +5,21 @@
 #include "Core/GameState.hh"
 #include "Debug/Log.hh"
 #include "Scripting/Lua.hh"
+
+// clang-format off
+#define BOYD_MODULE(name, priority) \
+    extern "C" { \
+        BOYD_API void *BoydInit_##name(void); \
+        BOYD_API void  BoydUpdate_##name(void *); \
+        BOYD_API void  BoydHalt_##name(void *); \
+    }
+// clang-format on
+BOYD_MODULES_LIST()
+
+#undef BOYD_MODULE
+
+#include "Modules/Loader.hh" // this redefines BOYD_MODULE
+
 using namespace boyd;
 
 #include "raylib.h"
@@ -29,7 +44,9 @@ static void raylibLog(int msgType, const char *fmt, va_list args)
 
 int main(void)
 {
-    BOYD_LOG(Debug, "BoydEngine v{}.{}", BoydEngine_VERSION_MAJOR, BoydEngine_VERSION_MINOR);
+    BOYD_LOG(Debug, "BoydEngine v{}.{}", BOYD_VERSION_MAJOR, BOYD_VERSION_MINOR);
+
+    BOYD_MODULES_LIST();
     SetTraceLogCallback(raylibLog);
 
     // Make sure game state is inited
@@ -45,9 +62,14 @@ int main(void)
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
+#ifdef BOYD_HOT_RELOADING
+    SetListener("lib/", 100);
+#endif
+
     // Main game loop
     while(!WindowShouldClose()) // Detect window close button or ESC key
     {
+        UpdateModules();
         // Update
         //----------------------------------------------------------------------------------
         // TODO: Update your variables here
@@ -69,6 +91,10 @@ int main(void)
     //--------------------------------------------------------------------------------------
     CloseWindow(); // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
+
+#ifdef BOYD_HOT_RELOADING
+    CloseListener();
+#endif
 
     return 0;
 }

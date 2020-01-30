@@ -15,13 +15,13 @@ inline BoydGfxState* GetState(void* state)
 extern "C" {
     BOYD_API void* BoydInit_Gfx()
     {
-        BOYD_LOG(Info, "Started Gfx module");
+        BOYD_LOG(Info, "Starting Gfx module");
         return new BoydGfxState;
     }
 
     BOYD_API void BoydUpdate_Gfx(void* state)
     {
-        BOYD_LOG(Info, "Update...");
+        BOYD_LOG(Info, "Update2...");
     }
 
     BOYD_API void BoydHalt_Gfx(void* state)

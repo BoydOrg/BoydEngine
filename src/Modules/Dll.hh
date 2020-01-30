@@ -20,20 +20,41 @@
 
 namespace boyd{
 
+/// Just a wrapper to a module.
+/// Avoid using this directly!
+struct BoydModule {
+    std::string modname;
+    void* (*InitFunc) (void) {nullptr};
+    void  (*UpdateFunc) (void* ) {nullptr};
+    void  (*HaltFunc) (void* ) {nullptr};
+    void* data {nullptr};
+    int priority {0};
+
+    void Update() {UpdateFunc(data);}
+
+    /// Orders two modules by their priority in ascending order
+    inline bool operator<(const BoydModule& other) const
+    {
+        return priority < other.priority;
+    }
+};
+
+#ifdef BOYD_PLATFORM_POSIX
+        constexpr int _prefixSkip = 3;
+#else
+        constexpr int _prefixSkip = 0;
+#endif    
+
 /// A wrapper over a shared library
-class Dll {
+class Dll: public BoydModule {
+    void* handle {nullptr};
+
     std::string initFuncName;
     std::string updateFuncName;
     std::string haltFuncName;
 
-    void* handle;
-    void* (*initFunc) (void);
-    void  (*updateFunc) (void*);
-    void  (*haltFunc) (void*);
-    void *data;
-
     template<typename FuncType>
-    void CheckSymbol(const string& symbolName, FuncType& function)
+    void CheckSymbol(const std::string& symbolName, FuncType& function)
     {
         if(!(function = reinterpret_cast<FuncType>(dlsym(handle, symbolName.c_str()))))
             BOYD_LOG(Error, "{}", dlerror());
@@ -41,11 +62,28 @@ class Dll {
 
     void ReloadSymbols()
     {
-        CheckSymbol(initFuncName, initFunc);
-        CheckSymbol(updateFuncName, updateFunc);
-        CheckSymbol(haltFuncName, haltFunc);
+        CheckSymbol(initFuncName, InitFunc);
+        CheckSymbol(updateFuncName, UpdateFunc);
+        CheckSymbol(haltFuncName, HaltFunc);
     }
 
+    void Free()
+    {
+        if(HaltFunc)
+        {
+            HaltFunc(data);
+            data = nullptr;
+        }
+        if (handle)
+        {
+            dlclose(handle);
+            handle = nullptr;
+        }
+        // invalidate handle and function pointers
+        InitFunc = nullptr;
+        UpdateFunc = nullptr;
+        HaltFunc = nullptr;
+    }
 
 public:
     /// Acquire a library and call its init method.
@@ -58,21 +96,21 @@ public:
     ///
     /// Note: this wrapper strictly forbids copy constructors.
     const std::filesystem::path filepath;
-    const std::string filename;
-    std::string modname;
-
-    Dll(std::filesystem::path filepath)
-        : filepath{filepath},
-          filename{filepath.filename()}
+    Dll(std::string modname, int priority) :
+        filepath{GetModulePath(modname)}
     {
-        // Take the filename only, strip the "lib" prefix and remove the extension
-        modname = filename.substr(3, filename.size() - 3 - filepath.extension().string().size());
+        BOYD_LOG(Info, "Loading module {}", modname);
+
+        this->modname = modname;
+        this->priority = priority;
+
+        BOYD_LOG(Debug, "Trying to access {}", filepath.string());
 
         initFuncName     = std::string{"BoydInit_"} + modname;
         updateFuncName   = std::string{"BoydUpdate_"} + modname;
         haltFuncName     = std::string{"BoydHalt_"} + modname;
 
-        ReloadSymbols();
+        Reload();
     }
 
     // Avoid spurious problems when sharing libraries.
@@ -87,42 +125,59 @@ public:
     Dll& operator=(Dll&& toMove)
     {
         this->handle = toMove.handle;
-        this->initFunc = toMove.initFunc;
+        this->InitFunc = toMove.InitFunc;
         this->initFuncName = toMove.initFuncName;
-        this->updateFunc = toMove.updateFunc;
+        this->UpdateFunc = toMove.UpdateFunc;
         this->updateFuncName = toMove.updateFuncName;
-        this->haltFunc = toMove.haltFunc;
+        this->HaltFunc = toMove.HaltFunc;
         this->haltFuncName = toMove.haltFuncName;
 
         // invalidate handle and function pointers
         toMove.handle = nullptr;
-        toMove.initFunc = nullptr;
-        toMove.updateFunc = nullptr;
-        toMove.haltFunc = nullptr;
+        toMove.InitFunc = nullptr;
+        toMove.UpdateFunc = nullptr;
+        toMove.HaltFunc = nullptr;
 
         return *this;
     }
 
     ~Dll()
     {
-        haltFunc(data);
-        dlclose(handle);
+        Free();
     }
     
-    /// Call the Update function inside the module
-    void Update()
-    {
-        updateFunc(data);
-    }
-
-    /// Reload the module by reloading all the exported names
+    /// Reload the module by reloading all the exported names.
+    /// Note that this method is not thread-safe! Plase avoid calling any
+    /// symbol function during a `Reload()`.
     void Reload()
     {
-        (void) this->~Dll();
+        Free();
         handle = dlopen(filepath.c_str(), RTLD_NOW | RTLD_LOCAL);
         ReloadSymbols();
-        data = initFunc();
+        data = InitFunc();
     }
+
+    /// Given a library path, extract the name of the module
+    /// `path`: the path of the module. The extracted module will be the name of
+    ///         the module without the extension and possibly the prefix
+    static std::string GetModuleName(const std::filesystem::path& path)
+    {
+        std::filesystem::path filename = path.filename();
+        return filename.stem().string().substr(_prefixSkip);
+    }
+
+    static std::filesystem::path GetModulePath(const std::string name)
+    {
+        return std::filesystem::path {"lib/lib"} += (name + 
+#ifdef BOYD_PLATFORM_POSIX
+            ".so"
+#else
+            ".dll"
+#endif
+        );
+    }
+
+
 };
 
 }

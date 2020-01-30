@@ -5,3 +5,6 @@
 // What type of Lua?
 #cmakedefine BOYD_LUA_VANILLA
 #cmakedefine BOYD_LUA_LUAJIT
+
+// One BOYD_MODULE() definition per line
+#define BOYD_MODULES_LIST() @BOYD_MODULES_MACRO@
