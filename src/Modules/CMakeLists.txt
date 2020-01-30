@@ -52,7 +52,7 @@ endmacro()
 boyd_module(Audio 20 Audio/Audio.cc)
 boyd_module(Gfx 99 Gfx/Gfx.cc)
 
-target_link_libraries(Audio PUBLIC tinywav)
+target_link_libraries(Audio PUBLIC tinywav FLAC FLAC++)
 
 set(BOYD_MODULES_MACRO "")
 foreach(BOYD_MODULE ${BOYD_MODULES})
