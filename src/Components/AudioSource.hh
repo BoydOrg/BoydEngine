@@ -4,7 +4,6 @@
 #include "../Scripting/Lua.hh"
 #include <AL/al.h>
 #include <AL/alc.h>
-#include <glm/glm.hpp>
 
 namespace boyd
 {

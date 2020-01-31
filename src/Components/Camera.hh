@@ -10,15 +10,16 @@ namespace comp
 {
 
 /// A 3D transform relative to world-space
-struct BOYD_API Transform
+struct BOYD_API Camera
 {
-    // Start with a unitary matrix
-    glm::mat4 matrix{1.0};
+    glm::vec3 position;
+    // Managed internally by Raylib, do not touch!
+    ::Camera camera;
 };
 
 /*
 template <>
-struct ScriptRegistrar<Transform>
+struct ScriptRegistrar<Camera>
 {
     register()
 };
