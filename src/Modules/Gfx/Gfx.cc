@@ -28,6 +28,17 @@ void RegisterMesh(entt::registry &registry, entt::entity entity, boyd::comp::Mes
     }
 }
 
+void RegisterCamera(entt::registry &registry, entt::entity entity, boyd::comp::Camera &camera)
+{
+    Camera &raylibCamera = camera.camera;
+    // TODO: move this somewhere else
+    raylibCamera.position = (Vector3){0.0, 1.0, 0.0f};
+    raylibCamera.up = (Vector3){0.0f, 1.0f, 0.0f};
+    raylibCamera.target = (Vector3){0.0f, 0.0f, 0.0f};
+    raylibCamera.fovy = 45.0f;
+    raylibCamera.type = CAMERA_PERSPECTIVE;
+}
+
 extern "C" {
 BOYD_API void *BoydInit_Gfx()
 {
@@ -48,16 +59,18 @@ BOYD_API void BoydUpdate_Gfx(void *state)
         camera = &camera.camera;
     });
 
+    ::BeginMode3D(*camera);
+
     entt_state->ecs.view<boyd::comp::Transform, boyd::comp::Mesh>()
         .each([state](auto entity, auto &transform, auto &mesh) {
-            //DrawModelEx(mesh.model, )
-            glm::mat4 scale;
-            glm::quat rotation;
-            glm::vec3 translation;
-            glm::vec3 skew;
-            glm::vec4 perspective;
-            glm::decompose(transform.matrix, scale, rotation, translation, skew, perspective);
+            DrawModelEx(mesh.model, transform.position,
+                        transform.rotationAxis,
+                        transform.rotationAngle,
+                        ::WHITE);
         });
+
+    ::EndMode3D();
+    ::EndDrawing();
 }
 
 BOYD_API void BoydHalt_Gfx(void *state)

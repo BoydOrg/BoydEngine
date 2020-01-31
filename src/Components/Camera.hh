@@ -12,9 +12,7 @@ namespace comp
 /// A 3D transform relative to world-space
 struct BOYD_API Camera
 {
-    glm::vec3 position;
-    // Managed internally by Raylib, do not touch!
-    ::Camera camera;
+    ::Camera camera{0};
 };
 
 /*
