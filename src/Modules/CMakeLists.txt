@@ -49,6 +49,7 @@ macro(boyd_module module_name priority_no sources)
     endif()
 endmacro()
 
+boyd_module(Scripting 1 Scripting/Scripting.cc)
 boyd_module(Audio 20 Audio/Audio.cc)
 boyd_module(Gfx 99 Gfx/Gfx.cc)
 
