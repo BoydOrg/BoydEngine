@@ -18,6 +18,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     OpenAL
     LuaBridge
     ${BOYD_LUA}
+    polyvox
 )
 
 # Generate BoydBuildConfig.hh by compiling & running BoydBuildUtil
@@ -33,7 +34,6 @@ add_dependencies(BoydEngine runBoydBuildUtil)
 target_include_directories(BoydEngine PUBLIC
     "${CMAKE_CURRENT_BINARY_DIR}"
 )
-
 
 # Compile all modules
 set(BOYD_MODULES "" PARENT_SCOPE)
