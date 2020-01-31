@@ -2,6 +2,7 @@
 #include <memory>
 
 #include "BoydEngine.hh"
+#include "Components/Voxels.hh"
 #include "Core/GameState.hh"
 #include "Debug/Log.hh"
 #include "Scripting/Lua.hh"

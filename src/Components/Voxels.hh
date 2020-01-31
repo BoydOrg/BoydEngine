@@ -32,5 +32,10 @@ struct BOYD_API Voxels
     Voxels &operator=(Voxels &&toMove) = default;
 };
 
+/// Marks a `Voxels` component in the same entity as "dirty" (i.e., need remeshing)
+struct BOYD_API VoxelsDirty
+{
+};
+
 } // namespace comp
 } // namespace boyd

@@ -50,6 +50,7 @@ macro(boyd_module module_name priority_no sources)
 endmacro()
 
 boyd_module(Audio 20 Audio/Audio.cc)
+boyd_module(Voxel 98 Voxel/Voxel.cc)
 boyd_module(Gfx 99 Gfx/Gfx.cc)
 
 target_link_libraries(Audio PUBLIC tinywav FLAC FLAC++)
