@@ -35,9 +35,3 @@ target_include_directories(tinywav PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/tinywav")
 # Xiph's Flac - https://github.com/janbar/flac-cmake - based on xiph/flac - License: Xiph's License + LGPL + GPL + FDL
 set(BUILD_DOCS OFF CACHE BOOL "" FORCE) # Disable docs generation
 add_subdirectory(flac)
-# LuaBridge - https://github.com/vinniefalco/LuaBridge - License: modified MIT
-set(LUABRIDGE_TESTING OFF CACHE BOOL "" FORCE)
-add_subdirectory(luabridge/)
-
-# Lua or LuaJIT - License: MIT 
-include(Lua.cmake)
