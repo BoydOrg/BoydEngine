@@ -3,6 +3,8 @@
 #include "../Core/Platform.hh"
 #include "../Scripting/Lua.hh"
 #include <glm/glm.hpp>
+
+#include <entt/entt.hpp>
 #include <raylib.h>
 #include <string>
 

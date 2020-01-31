@@ -12,11 +12,7 @@ namespace comp
 /// A 3D transform relative to world-space
 struct BOYD_API Transform
 {
-    ::Vector3 scale;
-    ::Vector3 rotationAxis;
-    ::Vector3 rotationAngle;
-    ::Vector3 position;
-    ::Vector3 skew;
+    glm::mat4 matrix;
 };
 
 /*

@@ -18,8 +18,10 @@ inline BoydGfxState *GetState(void *state)
     return reinterpret_cast<BoydGfxState *>(state);
 }
 
-void RegisterMesh(entt::registry &registry, entt::entity entity, boyd::comp::Mesh &mesh)
+void OnRegisterMesh(entt::registry &registry, entt::entity entity)
 {
+    auto &mesh = registry.get<boyd::comp::Mesh>(entity);
+
     mesh.model = LoadModel(mesh.modelName.c_str());
     if(mesh.textureName.size())
     {
@@ -28,9 +30,11 @@ void RegisterMesh(entt::registry &registry, entt::entity entity, boyd::comp::Mes
     }
 }
 
-void RegisterCamera(entt::registry &registry, entt::entity entity, boyd::comp::Camera &camera)
+void OnRegisterCamera(entt::registry &registry, entt::entity entity)
 {
-    Camera &raylibCamera = camera.camera;
+    auto &camera = registry.get<boyd::comp::Camera>(entity);
+
+    RaylibCamera &raylibCamera = camera.camera;
     // TODO: move this somewhere else
     raylibCamera.position = (Vector3){0.0, 1.0, 0.0f};
     raylibCamera.up = (Vector3){0.0f, 1.0f, 0.0f};
@@ -44,7 +48,9 @@ BOYD_API void *BoydInit_Gfx()
 {
     BOYD_LOG(Info, "Starting Gfx module");
     boyd::GameState *entt_state = Boyd_GameState();
-    entt_state->ecs.on_construct<boyd::comp::Mesh>().connect<&RegisterMesh>();
+    entt_state->ecs.on_construct<boyd::comp::Mesh>().template connect<&OnRegisterMesh>();
+
+    // entt_state->ecs.on_construct<boyd::comp::Camera>().connect<&OnRegisterCamera>();
     return new BoydGfxState;
 }
 
@@ -53,20 +59,18 @@ BOYD_API void BoydUpdate_Gfx(void *state)
     boyd::GameState *entt_state = Boyd_GameState();
 
     auto *gfxState = GetState(state);
-    ::Camera *camera;
+    Camera *mainCamera;
 
-    entt_state->ecs.view<boyd::comp::Camera>().each([camera](auto entity, auto &camera) {
-        camera = &camera.camera;
+    entt_state->ecs.view<boyd::comp::Camera>().each([&mainCamera](auto entity, auto &camera) {
+        mainCamera = &camera.camera;
     });
 
-    ::BeginMode3D(*camera);
+    ::BeginMode3D(*mainCamera);
 
     entt_state->ecs.view<boyd::comp::Transform, boyd::comp::Mesh>()
-        .each([state](auto entity, auto &transform, auto &mesh) {
-            DrawModelEx(mesh.model, transform.position,
-                        transform.rotationAxis,
-                        transform.rotationAngle,
-                        ::WHITE);
+        .each([state](auto entity, auto &transform, boyd::comp::Mesh &mesh) {
+            memcpy(&mesh.model.transform, &transform.matrix, sizeof(::Matrix));
+            DrawModel(mesh.model, (Vector3){0, 6.0f, 0}, 1.0f, WHITE);
         });
 
     ::EndMode3D();
@@ -76,6 +80,8 @@ BOYD_API void BoydUpdate_Gfx(void *state)
 BOYD_API void BoydHalt_Gfx(void *state)
 {
     BOYD_LOG(Info, "Halting Gfx module");
+    boyd::GameState *entt_state = Boyd_GameState();
+    entt_state->ecs.on_construct<boyd::comp::Mesh>().disconnect<&OnRegisterMesh>();
     delete GetState(state);
 }
 }
