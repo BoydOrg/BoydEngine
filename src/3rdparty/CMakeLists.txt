@@ -8,10 +8,18 @@ add_subdirectory(entt/)
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # avoid building examples
 set(BUILD_GAMES OFF CACHE BOOL "" FORCE)    # or games
 set(USE_AUDIO OFF CACHE BOOL "" FORCE)      # or the audio module as we already use OpenAL-soft
+set(OSS_LIBRARY "" CACHE STRING "" FORCE)   # disable OSS (as audio is disabled)
 add_subdirectory(raylib/)
 
 # fmtlib - https://github.com/fmtlib/fmt - License: modified MIT
 add_subdirectory(fmt/)
+
+# LuaBridge - https://github.com/vinniefalco/LuaBridge - License: modified MIT
+set(LUABRIDGE_TESTING OFF CACHE BOOL "" FORCE)
+add_subdirectory(luabridge/)
+
+# Lua or LuaJIT - License: MIT 
+include(Lua.cmake)
 
 # glm - https://github.com/g-truc/glm - License: MIT + Happy Bunny License
 add_subdirectory(glm/)
@@ -21,9 +29,10 @@ set(ALSOFT_BACKEND_SDL2 OFF CACHE BOOL "" FORCE) # disable SDL2 mixer
 set(ALSOFT_EXAMPLES OFF CACHE BOOL "" FORCE)     # Examples use SDL1 which cause us redefinition issues with raylib
 add_subdirectory(openal-soft)
 
-# LuaBridge - https://github.com/vinniefalco/LuaBridge - License: modified MIT
-set(LUABRIDGE_TESTING OFF CACHE BOOL "" FORCE)
-add_subdirectory(luabridge/)
+# Tinywav - https://github.com/mhroth/tinywav - License: MIT
+add_library(tinywav STATIC tinywav/tinywav.c)
+target_include_directories(tinywav PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/tinywav")
 
-# Lua or LuaJIT - License: MIT 
-include(Lua.cmake)
+# Xiph's Flac - https://github.com/janbar/flac-cmake - based on xiph/flac - License: Xiph's License + LGPL + GPL + FDL
+set(BUILD_DOCS OFF CACHE BOOL "" FORCE) # Disable docs generation
+add_subdirectory(flac)
