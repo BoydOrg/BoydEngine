@@ -1,6 +1,7 @@
 #include "../../Core/Platform.hh"
 #include "../../Debug/Log.hh"
-#include "../../Scripting/Lua.hh"
+#include "Lua.hh"
+#include "Registrar.hh"
 
 // TODO: Serialize VM state to disk on halt / reload on init?
 
@@ -11,11 +12,15 @@ struct BoydScriptingState
     BoydScriptingState()
         : L(nullptr)
     {
-        BOYD_LOG(Debug, "Starting {}...\n", LUA_RELEASE);
-        BOYD_LOG(Debug, "{}", LUA_COPYRIGHT);
+        BOYD_LOG(Debug, "Starting {}", LUA_RELEASE);
         L = luaL_newstate();
         luaL_openlibs(L);
-        BOYD_LOG(Debug, "Lua started");
+
+        BOYD_LOG(Debug, "Registering Lua bindings");
+        boyd::RegisterECS(L);
+        boyd::RegisterAllComponents(L);
+
+        BOYD_LOG(Debug, "Lua initialized");
     }
     ~BoydScriptingState()
     {

@@ -15,9 +15,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     raylib
     fmt::fmt
     glm
-    OpenAL
-    LuaBridge
-    ${BOYD_LUA}
     polyvox
 )
 

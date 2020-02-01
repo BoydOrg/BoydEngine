@@ -43,7 +43,7 @@ macro(boyd_module)
         CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib"
         CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib"
     )
-    target_include_directories(${_BOYD_MODULE_NAME} PUBLIC
+    target_include_directories(${_BOYD_MODULE_NAME} BEFORE PUBLIC
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
         ${_BOYD_MODULE_INCLUDES}
     ) 
@@ -66,6 +66,7 @@ endmacro()
 
 boyd_module(NAME Scripting PRIORITY 1
     SOURCES Scripting/Scripting.cc Scripting/Registrar.cc
+    LINKS LuaBridge ${BOYD_LUA}
 )
 
 boyd_module(NAME Audio PRIORITY 20
