@@ -35,3 +35,10 @@ target_include_directories(tinywav PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/tinywav")
 # Xiph's Flac - https://github.com/janbar/flac-cmake - based on xiph/flac - License: Xiph's License + LGPL + GPL + FDL
 set(BUILD_DOCS OFF CACHE BOOL "" FORCE) # Disable docs generation
 add_subdirectory(flac)
+
+# Polyvox - https://bitbucket.org/volumesoffun/polyvox.git - License: zlib
+set(ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(ENABLE_DOCS OFF CACHE BOOL "" FORCE)
+add_subdirectory(polyvox)
+add_library(polyvox INTERFACE)
+target_include_directories(polyvox INTERFACE ${PolyVoxHeaders_SOURCE_DIR})
