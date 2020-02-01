@@ -4,7 +4,6 @@
 #include "BoydEngine.hh"
 #include "Core/GameState.hh"
 #include "Debug/Log.hh"
-#include "Scripting/Lua.hh"
 
 // clang-format off
 #define BOYD_MODULE(name, priority) \

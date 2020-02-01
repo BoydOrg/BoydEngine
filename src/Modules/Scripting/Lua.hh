@@ -8,10 +8,8 @@ extern "C" {
 #else
 #    include <lua.h>
 #endif
-// clang-format off
-#include <lualib.h>
 #include <lauxlib.h>
-// clang-format on
+#include <lualib.h>
 }
 
 #include <LuaBridge/LuaBridge.h>
