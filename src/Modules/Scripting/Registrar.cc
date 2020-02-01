@@ -1,6 +1,8 @@
 #include "Registrar.hh"
 
 #include "../../Core/GameState.hh"
+#include <fmt/format.h>
+#include <string>
 
 // TODO: Find a way to automate this (likely CMake generating a file list)!
 #include "../../Components/AudioSource.hh"
@@ -15,6 +17,8 @@ namespace boyd
 class LuaEntity
 {
 public:
+    entt::entity id;
+
     explicit LuaEntity(entt::entity entity)
         : id{entity}
     {
@@ -23,7 +27,17 @@ public:
     {
     }
 
-    entt::entity id;
+    /// Returns the entity id as a raw integer.
+    uint32_t getId() const
+    {
+        return uint32_t(id);
+    }
+
+    /// Returns a pretty-printing of the entity.
+    std::string toString() const
+    {
+        return fmt::format("Entity({})", getId());
+    }
 };
 
 /// Lua function to create an EnTT entity.
@@ -52,7 +66,8 @@ void RegisterECS(lua_State *L)
     luabridge::getGlobalNamespace(L)
         .beginNamespace(BOYD_NAMESPACE)
             .beginClass<LuaEntity>("Entity")
-                .addData("id", &LuaEntity::id)
+                .addProperty("id", &LuaEntity::getId)
+                .addFunction("__tostring", &LuaEntity::toString)
             .endClass()
             .beginNamespace("entity")
                 .addFunction("create", &LuaCreateEntity)
