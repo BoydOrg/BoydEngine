@@ -157,9 +157,18 @@ public:
     void Reload()
     {
         Free();
+
         handle = dlopen(filepath.c_str(), RTLD_NOW | RTLD_LOCAL);
+        if(!handle)
+        {
+            BOYD_LOG(Error, "Failed to dlopen {}: {}", filepath.c_str(), dlerror());
+            return;
+        }
         ReloadSymbols();
-        data = InitFunc();
+        if(InitFunc)
+        {
+            data = InitFunc();
+        }
     }
 
     /// Given a library path, extract the name of the module

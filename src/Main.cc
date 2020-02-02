@@ -4,8 +4,8 @@
 #include "BoydEngine.hh"
 #include "Components/Voxels.hh"
 #include "Core/GameState.hh"
+#include "Core/SceneManager.hh"
 #include "Debug/Log.hh"
-#include "Scripting/Lua.hh"
 
 // clang-format off
 #define BOYD_MODULE(name, priority) \
@@ -52,6 +52,7 @@ int main(void)
 
     // Make sure game state is inited
     (void)GameStateManager::Instance();
+    (void)SceneManager::Instance();
 
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -67,9 +68,14 @@ int main(void)
     SetListener("lib/", 100);
 #endif
 
+    SceneManager::LoadScene("res/scene/1.scene");
+
     // Main game loop
     while(!WindowShouldClose()) // Detect window close button or ESC key
     {
+        // Technically this is a bad breach of any game loop rule, but Gfx makes drawing call
+        // inside the updat method.
+        BeginDrawing();
         UpdateModules();
         // Update
         //----------------------------------------------------------------------------------
@@ -78,11 +84,8 @@ int main(void)
 
         // Draw
         //----------------------------------------------------------------------------------
-        BeginDrawing();
 
-        ClearBackground(RAYWHITE);
-
-        DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
+        //DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
 
         EndDrawing();
         //----------------------------------------------------------------------------------

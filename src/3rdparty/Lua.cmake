@@ -8,8 +8,9 @@ if(BOYD_LUA STREQUAL "Lua")
     add_library(Lua STATIC lua/onelua.c)
     add_definitions(Lua PUBLIC -DMAKE_LIB)
     remove_definitions(Lua PUBLIC -DMAKE_LUA -DMAKE_LUAC)
+    # IMPORTANT or <lua.h> will be the system one!
     target_include_directories(Lua PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lua/"
     )
 
     if(WIN32)
