@@ -29,10 +29,13 @@ struct BoydModule
     void *(*InitFunc)(void){nullptr};
     void (*UpdateFunc)(void *){nullptr};
     void (*HaltFunc)(void *){nullptr};
+
     ~BoydModule()
     {
         if(HaltFunc)
+        {
             HaltFunc(data);
+        }
         InitFunc = nullptr;
         UpdateFunc = nullptr;
         HaltFunc = nullptr;
@@ -86,12 +89,13 @@ class Dll : public BoydModule
 
     void Free()
     {
+        // Need to destroy the module instance before unloading the function pointers...
+        this->BoydModule::~BoydModule();
         if(handle)
         {
             dlclose(handle);
             handle = nullptr;
         }
-
         // The parent constructor will be called.
     }
 
