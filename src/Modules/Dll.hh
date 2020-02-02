@@ -29,10 +29,24 @@ struct BoydModule
     void *(*InitFunc)(void){nullptr};
     void (*UpdateFunc)(void *){nullptr};
     void (*HaltFunc)(void *){nullptr};
+    ~BoydModule()
+    {
+        if(HaltFunc)
+            HaltFunc(data);
+        InitFunc = nullptr;
+        UpdateFunc = nullptr;
+        HaltFunc = nullptr;
+    }
     void *data{nullptr};
     int priority{0};
 
-    void Update() { UpdateFunc(data); }
+    void Update()
+    {
+        if(UpdateFunc)
+        {
+            UpdateFunc(data);
+        }
+    }
 
     /// Orders two modules by their priority in ascending order
     inline bool operator<(const BoydModule &other) const
@@ -72,20 +86,13 @@ class Dll : public BoydModule
 
     void Free()
     {
-        if(HaltFunc)
-        {
-            HaltFunc(data);
-            data = nullptr;
-        }
         if(handle)
         {
             dlclose(handle);
             handle = nullptr;
         }
-        // invalidate handle and function pointers
-        InitFunc = nullptr;
-        UpdateFunc = nullptr;
-        HaltFunc = nullptr;
+
+        // The parent constructor will be called.
     }
 
 public:

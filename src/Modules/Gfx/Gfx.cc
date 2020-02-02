@@ -36,9 +36,11 @@ BOYD_API void BoydUpdate_Gfx(void *state)
         mainCamera = &camera.camera;
     });
 
+    /*
     BOYD_LOG(Info, "{} {} {}", mainCamera->target.x,
              mainCamera->target.y,
              mainCamera->target.z);
+    */
 
     ClearBackground(BLACK);
 
