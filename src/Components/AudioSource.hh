@@ -14,16 +14,20 @@ namespace comp
 /// A 3D transform relative to world-space
 struct BOYD_API AudioSource
 {
-    std::string audioSource{};
-
-    // TODO: add Alsoft internals
-    ALuint source;
+    std::string assetFile{};
 
     enum class SoundType
     {
         SFX,
         BGM
-    };
+    } soundType;
+
+    AudioSource(std::string assetFile, SoundType soundType)
+    : assetFile{assetFile}, soundType{soundType}
+    {}
+    /// Internal OpenAL buffer, do not edit!
+    ALuint buffer;
+    ALuint alSource;
 };
 
 } // namespace comp
