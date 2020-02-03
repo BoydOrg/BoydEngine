@@ -1,9 +1,13 @@
 #pragma once
 
-#include "../Core/Platform.hh"
-#include "../Core/Registrar.hh"
+#include <fmt/format.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
+
+#include "../Core/Platform.hh"
+#include "../Core/Registrar.hh"
 
 namespace boyd
 {
@@ -14,6 +18,11 @@ namespace comp
 struct BOYD_API Transform
 {
     glm::mat4 matrix;
+
+    Transform(const glm::mat4 &matrix = glm::identity<glm::mat4>())
+        : matrix{matrix}
+    {
+    }
 };
 
 } // namespace comp
@@ -21,6 +30,8 @@ struct BOYD_API Transform
 template <typename TRegister>
 struct Registrar<comp::Transform, TRegister>
 {
+    static constexpr const char *TYPENAME = "Transform";
+
     static comp::Transform Translated(comp::Transform *self, float x, float y, float z)
     {
         return {glm::translate(self->matrix, glm::vec3{x, y, z})};
@@ -34,13 +45,20 @@ struct Registrar<comp::Transform, TRegister>
         return {glm::scale(self->matrix, glm::vec3{x, y, z})};
     }
 
+    static std::string ToString(const comp::Transform *self)
+    {
+        return fmt::format(FMT_STRING("Transform({})"), glm::to_string(self->matrix));
+    }
+
     static TRegister Register(TRegister &reg)
     {
         // clang-format off
-        return reg.template beginClass<comp::Transform>("Transform")
+        return reg.template beginClass<comp::Transform>(TYPENAME)
+            .template addConstructor<void(*)(void)>()
             .addFunction("translated", Translated)
             .addFunction("rotated", Rotated)
             .addFunction("scaled", Scaled)
+            .addFunction("__tostring", ToString)
         .endClass();
         // clang-format on
     }

@@ -17,10 +17,32 @@ struct BoydScriptingState
         luaL_openlibs(L);
 
         BOYD_LOG(Debug, "Registering Lua bindings");
+        boyd::RegisterAllTypes(L);
         boyd::RegisterECS(L);
-        boyd::RegisterAllComponents(L);
 
         BOYD_LOG(Debug, "Lua initialized");
+
+        // FIXME PAOLO - Debug only!!
+        luaL_dostring(L, R"(
+            io.stderr:write('Hello, Lua!\n')
+
+            local ent = boyd.entity.create()
+            io.stderr:write('Entity: ' .. tostring(ent) .. '\n')
+
+            transfComp = ent:comp('Transform')
+            io.stderr:write(tostring(transfComp) .. '\n')
+
+            --for k, v in pairs(transfComp) do
+            --    print(k .. ':' .. tostring(v) .. '\n')
+            --end
+
+            io.stderr:write('Initial transform = ' .. tostring(transfComp:get()) .. '\n')
+            local newTransf = boyd.Transform():translated(10, 10, 10)
+            transfComp:set(newTransf)
+            io.stderr:write('New transform = ' .. tostring(transfComp:get()) .. '\n')
+        )");
+        const char *luaErr = lua_tostring(L, -1);
+        BOYD_LOG(Debug, "Lua err: {}", luaErr ? luaErr : "<none>");
     }
     ~BoydScriptingState()
     {
