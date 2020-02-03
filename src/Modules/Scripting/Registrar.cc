@@ -4,11 +4,6 @@
 #include <fmt/format.h>
 #include <string>
 
-// TODO: Find a way to automate this (likely CMake generating a file list)!
-#include "../../Components/AudioSource.hh"
-#include "../../Components/Mesh.hh"
-#include "../../Components/Transform.hh"
-
 namespace boyd
 {
 // clang-format off
@@ -77,14 +72,25 @@ void RegisterECS(lua_State *L)
         .endNamespace();
 }
 
+} // namespace boyd
 // -----------------------------------------------------------------------------
+// TODO: Find a way to automate this (likely CMake generating a file list)!
+
+#include "../../Components/Transform.hh"
+
+namespace boyd
+{
 
 void RegisterAllComponents(lua_State *L)
 {
-    // FIXME IMPLEMENT!
+    using TRegister = luabridge::Namespace;
+    auto ns = luabridge::getGlobalNamespace(L).beginNamespace(BOYD_NAMESPACE);
+
+    ns = Registrar<comp::Transform, TRegister>::Register(ns);
+
+    ns.endNamespace();
 }
 
 // -----------------------------------------------------------------------------
-
 // clang-format on
 } // namespace boyd
