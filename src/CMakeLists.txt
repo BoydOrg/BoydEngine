@@ -3,6 +3,9 @@ add_executable(BoydEngine WIN32
     Core/GameState.cc
     Core/SceneManager.cc
     Modules/Loader.cc
+
+    # Add this header here to make sure BoydBuildUtil gets compiled and run
+    ${CMAKE_CURRENT_BINARY_DIR}/BoydBuildConfig.hh
 )
 set_target_properties(BoydEngine PROPERTIES
     DEFINE_SYMBOL BOYD_DLL_EXPORTS
@@ -21,14 +24,13 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 
 # Generate BoydBuildConfig.hh by compiling & running BoydBuildUtil
 add_executable(BoydBuildUtil BoydBuildUtil.cc)
-add_custom_target(runBoydBuildUtil
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/BoydBuildConfig.hh
+    DEPENDS $<TARGET_FILE:BoydBuildUtil>
     COMMAND $<TARGET_FILE:BoydBuildUtil> ${CMAKE_CURRENT_BINARY_DIR}/BoydBuildConfig.hh
     COMMENT "Run BoydBuildUtil"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
-add_dependencies(runBoydBuildUtil BoydBuildUtil)
-add_dependencies(BoydEngine runBoydBuildUtil)
-
 target_include_directories(BoydEngine PUBLIC
     "${CMAKE_CURRENT_BINARY_DIR}"
 )
