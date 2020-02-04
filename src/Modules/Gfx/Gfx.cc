@@ -61,8 +61,8 @@ BOYD_API void BoydUpdate_Gfx(void *state)
     {
         FlipCursorGrabbing(gfxState);
     }
-#endif
     SetCursor(gfxState);
+#endif
 
     ClearBackground(BLACK);
 
