@@ -41,7 +41,7 @@ using EntityId = uint32_t;
 /// Lua args:
 /// - self: LuaEntity
 /// Lua returns:
-/// - TComponent for the given entity, or null if component not found with the given name.
+/// - TComponent for the given entity - or nil if absent
 template <typename TComponent>
 static int LuaGetComponent(lua_State *L)
 {
@@ -49,12 +49,12 @@ static int LuaGetComponent(lua_State *L)
     luaL_checktype(L, 1, LUA_TTABLE); // Ensure first argument is a table
     lua_getfield(L, 1, "entity");     // <-- Get `self.entity` --v
     EntityId entId = luabridge::Stack<EntityId>::get(L, -1);
-    entt::entity ent{entId};
+    entt::entity entity{entId};
 
     auto *gameState = Boyd_GameState();
-    if(gameState->ecs.has<TComponent>(ent))
+    if(gameState->ecs.valid(entity) && gameState->ecs.has<TComponent>(entity))
     {
-        luabridge::Stack<TComponent>::push(L, gameState->ecs.get<TComponent>(ent));
+        luabridge::Stack<TComponent>::push(L, gameState->ecs.get<TComponent>(entity));
     }
     else
     {
@@ -68,7 +68,7 @@ static int LuaGetComponent(lua_State *L)
 /// - self: LuaEntity
 /// - comp: TComponent - The component to assign/replace for `self.entity`
 /// Lua returns:
-/// (void)
+/// - true or (nil, string) on error
 template <typename TComponent>
 static int LuaSetComponent(lua_State *L)
 {
@@ -76,11 +76,18 @@ static int LuaSetComponent(lua_State *L)
     luaL_checktype(L, 1, LUA_TTABLE); // Ensure first argument is a table
     lua_getfield(L, 1, "entity");     // <-- Get `self.entity` --v
     EntityId entId = luabridge::Stack<EntityId>::get(L, -1);
-    entt::entity ent{entId};
+    entt::entity entity{entId};
 
     auto *gameState = Boyd_GameState();
-    gameState->ecs.assign_or_replace<TComponent>(ent, luabridge::Stack<TComponent>::get(L, 2));
-    return 0;
+    if(!gameState->ecs.valid(entity))
+    {
+        lua_pushnil(L);
+        luabridge::Stack<std::string>::push(L, fmt::format(FMT_STRING("Entity {} is invalid"), entId));
+        return 2;
+    }
+    gameState->ecs.assign_or_replace<TComponent>(entity, luabridge::Stack<TComponent>::get(L, 2));
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 /// LuaCFunction wrapper for EnTT's remove()
@@ -95,10 +102,13 @@ static int LuaRemoveComponent(lua_State *L)
     luaL_checktype(L, 1, LUA_TTABLE); // Ensure first argument is a table
     lua_getfield(L, 1, "entity");     // <-- Get `self.entity` --v
     EntityId entId = luabridge::Stack<EntityId>::get(L, -1);
-    entt::entity ent{entId};
+    entt::entity entity{entId};
 
     auto *gameState = Boyd_GameState();
-    gameState->ecs.remove<TComponent>(ent);
+    if(gameState->ecs.valid(entity))
+    {
+        gameState->ecs.remove<TComponent>(entity);
+    }
     return 0;
 }
 
@@ -198,7 +208,10 @@ struct LuaEntity
         entt::entity entity{entityId};
 
         auto *gameState = Boyd_GameState();
-        gameState->ecs.destroy(entity);
+        if(gameState->ecs.valid(entity))
+        {
+            gameState->ecs.destroy(entity);
+        }
         return 0;
     }
 
