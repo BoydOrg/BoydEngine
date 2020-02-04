@@ -1,23 +1,16 @@
 #pragma once
 
-#include <unordered_map>
-
-#include "../../Core/GameState.hh"
-#include "../../Core/Registrar.hh"
 #include "Lua.hh"
+#include "Scripting.hh"
 
 namespace boyd
 {
 
-// The namespace name for the Lua Boyd API.
-static constexpr const char *BOYD_NAMESPACE = "boyd";
-
-/// Registers all known types (& their respective `ComponentRef<Type>`) for use into the given Lua state.
-/// (They will all become available to EnTT for use as components.)
-void RegisterAllTypes(lua_State *L);
-
-/// Registers EnTT for use in Lua.
-/// WARNING: Must be done after `RegisterAllTypes`!
-void RegisterECS(lua_State *L);
+/// Registrs EnTT for use with Lua.
+/// Then registers all known types (as enumerated in "AllTypes.hh") as follows:
+/// - Registers their type into the given Lua state (via `Registrar<T>`; lua namespace `${BOYD_NAMESPACE}`)
+/// - Registers their type id for use by Lua scripts (lua namespace `${BOYD_NAMESPACE}.comp`)
+/// - Registers a <type id -> lua_CFunc function that returns Lua ComponentRef> for each type into `compFactory`
+void RegisterAllLuaTypes(BoydScriptingState *state);
 
 } // namespace boyd
