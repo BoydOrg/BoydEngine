@@ -78,11 +78,14 @@ BOYD_API void BoydHalt_Scripting(void *statePtr)
     BOYD_LOG(Info, "Halting scripting module");
 
     auto *state = GetState(statePtr);
-    // Call the halt function in the main script, if any
-    luabridge::LuaRef haltFunc = luabridge::getGlobal(state->L, boyd::HALT_FUNC_NAME);
-    if(haltFunc.isFunction())
+    // Call the halt function in the main script, if any.
+    // (notice the inner scope to ensure `~LuaRef()` is called!)
     {
-        haltFunc();
+        luabridge::LuaRef haltFunc = luabridge::getGlobal(state->L, boyd::HALT_FUNC_NAME);
+        if(haltFunc.isFunction())
+        {
+            haltFunc();
+        }
     }
 
     delete GetState(state);
