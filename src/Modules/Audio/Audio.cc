@@ -123,7 +123,7 @@ BOYD_API void BoydHalt_Audio(void *state)
 {
     BOYD_LOG(Info, "Halting AudioState module");
     auto &registry = Boyd_GameState()->ecs;
-    registry.on_construct<boyd::comp::AudioSource>().disconnect<OnAudioSourceRegister>();
+    //registry.on_construct<boyd::comp::AudioSource>().disconnect<OnAudioSourceRegister>();
     delete GetState(state);
 }
 }
