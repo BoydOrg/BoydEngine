@@ -11,6 +11,7 @@
 /// TODO: add state transfer
 struct BoydGfxState
 {
+    bool isCursorLocked;
 };
 
 inline BoydGfxState *GetState(void *state)
@@ -18,11 +19,30 @@ inline BoydGfxState *GetState(void *state)
     return reinterpret_cast<BoydGfxState *>(state);
 }
 
+void FlipCursorGrabbing(BoydGfxState *state)
+{
+    state->isCursorLocked ^= true;
+}
+
+void SetCursor(BoydGfxState *state)
+{
+    if(state->isCursorLocked)
+        DisableCursor();
+    else
+        EnableCursor();
+}
 extern "C" {
 BOYD_API void *BoydInit_Gfx()
 {
     BOYD_LOG(Info, "Starting Gfx module");
-    return new BoydGfxState;
+    auto *gfxState = new BoydGfxState;
+
+#ifdef DEBUG
+    gfxState->isCursorLocked = false;
+#else
+    gfxState->isCursorLocked = true;
+#endif
+    return gfxState;
 }
 
 BOYD_API void BoydUpdate_Gfx(void *state)
@@ -35,6 +55,14 @@ BOYD_API void BoydUpdate_Gfx(void *state)
     entt_state->ecs.view<boyd::comp::Camera>().each([&mainCamera](auto entity, auto &camera) {
         mainCamera = &camera.camera;
     });
+
+#ifdef DEBUG
+    if(IsKeyPressed(KEY_U) || (!gfxState->isCursorLocked && IsMouseButtonDown(MOUSE_LEFT_BUTTON)))
+    {
+        FlipCursorGrabbing(gfxState);
+    }
+#endif
+    SetCursor(gfxState);
 
     ClearBackground(BLACK);
 
