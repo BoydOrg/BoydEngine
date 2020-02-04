@@ -23,7 +23,27 @@ BoydScriptingState::BoydScriptingState()
 {
     BOYD_LOG(Debug, "Starting {}", LUA_RELEASE);
     L = luaL_newstate();
-    luaL_openlibs(L);
+
+    // Cherry-pick Lua libraries to open (excluding dangerous ones)
+    // (See: linit.c)
+    static constexpr const luaL_Reg LUA_LIBS[] = {
+        {LUA_GNAME, luaopen_base},
+        {LUA_LOADLIBNAME, luaopen_package},
+        {LUA_COLIBNAME, luaopen_coroutine},
+        {LUA_TABLIBNAME, luaopen_table},
+        //{LUA_IOLIBNAME, luaopen_io},
+        //{LUA_OSLIBNAME, luaopen_os},
+        {LUA_STRLIBNAME, luaopen_string},
+        {LUA_MATHLIBNAME, luaopen_math},
+        {LUA_UTF8LIBNAME, luaopen_utf8},
+        //{LUA_DBLIBNAME, luaopen_debug},
+        {NULL, NULL},
+    };
+    for(auto *luaLib = LUA_LIBS; luaLib->name; luaLib++)
+    {
+        luaL_requiref(L, luaLib->name, luaLib->func, 1);
+        lua_pop(L, 1);
+    }
 
     BOYD_LOG(Debug, "Registering Lua bindings");
     boyd::RegisterAllLuaTypes(this);
