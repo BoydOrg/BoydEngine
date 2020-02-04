@@ -70,8 +70,8 @@ boyd_module(NAME Scripting PRIORITY 1
 )
 
 boyd_module(NAME Audio PRIORITY 20
-    SOURCES Audio/Audio.cc
-    LINKS tinywav FLAC FLAC++ OpenAL
+    SOURCES Audio/Audio.cc Audio/Utils.cc
+    LINKS FLAC FLAC++ OpenAL
 )
 
 boyd_module(NAME Gfx PRIORITY 99

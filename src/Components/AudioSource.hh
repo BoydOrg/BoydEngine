@@ -23,10 +23,11 @@ struct BOYD_API AudioSource
     } soundType;
 
     AudioSource(std::string assetFile, SoundType soundType)
-    : assetFile{assetFile}, soundType{soundType}
-    {}
+        : assetFile{assetFile}, soundType{soundType}
+    {
+    }
     /// Internal OpenAL buffer, do not edit!
-    ALuint buffer;
+    ALuint alBuffer;
     ALuint alSource;
 };
 

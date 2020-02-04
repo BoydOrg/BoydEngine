@@ -18,14 +18,16 @@ struct BOYD_API Mesh
     Model model;
     Texture2D texture;
 
-    Mesh(std::string modelName, std::string textureName)
+    Mesh(std::string modelName, std::string textureName = "")
     {
         model = LoadModel(modelName.c_str());
+        /*
         if(textureName.size())
         {
             texture = LoadTexture(textureName.c_str());
             SetMaterialTexture(&model.materials[0], MAP_DIFFUSE, texture);
         }
+        */
     }
 };
 

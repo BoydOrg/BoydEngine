@@ -25,12 +25,12 @@
 [submodule "src/3rdparty/openal-soft"]
 	path = src/3rdparty/openal-soft
 	url = https://github.com/kcat/openal-soft
-[submodule "src/3rdparty/tinywav"]
-	path = src/3rdparty/tinywav
-	url = https://github.com/mhroth/tinywav
 [submodule "src/3rdparty/flac"]
 	path = src/3rdparty/flac
 	url = https://github.com/xiph/flac
 [submodule "src/3rdparty/polyvox"]
 	path = src/3rdparty/polyvox
 	url = https://bitbucket.org/volumesoffun/polyvox.git
+[submodule "src/3rdparty/freealut"]
+	path = src/3rdparty/freealut
+	url = https://github.com/vancegroup/freealut

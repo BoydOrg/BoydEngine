@@ -48,6 +48,8 @@ BOYD_API void BoydUpdate_Gfx(void *state)
 
     ::BeginMode3D(*mainCamera);
 
+    DrawPlane({0.0f, 0.0f, 0.0f}, {200.0f, 200.0f}, GREEN);
+
     entt_state->ecs.view<boyd::comp::Transform, boyd::comp::Mesh>()
         .each([state](auto entity, auto &transform, boyd::comp::Mesh &mesh) {
             memcpy(&mesh.model.transform, &transform.matrix, sizeof(::Matrix));
