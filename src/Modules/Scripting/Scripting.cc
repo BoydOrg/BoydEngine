@@ -9,8 +9,14 @@
 namespace boyd
 {
 
-/// The name of the main script to execute automatically as the scripting module is started.
-static constexpr const char *AUTOEXEC_SCRIPT = "res/autoexec.lua";
+/// The path to the main script, to be execute automatically as the scripting module is started
+static constexpr const char *MAIN_SCRIPT = "scripts/main.lua";
+
+/// The name of the update function defined in the script; it is executed every update of the scripting module.
+static constexpr const char *UPDATE_FUNC_NAME = "update";
+
+/// The name of the update function defined in the script; it is executed when the scripting module is halted.
+static constexpr const char *HALT_FUNC_NAME = "halt";
 
 BoydScriptingState::BoydScriptingState()
     : L{nullptr}, compRefFactory{}
@@ -22,10 +28,13 @@ BoydScriptingState::BoydScriptingState()
     BOYD_LOG(Debug, "Registering Lua bindings");
     boyd::RegisterAllLuaTypes(this);
 
-    BOYD_LOG(Debug, "Loading {}", AUTOEXEC_SCRIPT);
-    // FIXME luaL_loadfilex(L, AUTOEXEC_SCRIPT, "r");
-    //const char *luaErr = lua_tostring(L, -1);
-    //BOYD_LOG(Debug, "Lua err: {}", luaErr ? luaErr : "<none>");
+    BOYD_LOG(Debug, "Loading {}", MAIN_SCRIPT);
+    luaL_dofile(L, MAIN_SCRIPT);
+    const char *luaError = lua_tostring(L, -1);
+    if(luaError)
+    {
+        BOYD_LOG(Error, "Lua error: {}", luaError);
+    }
 
     BOYD_LOG(Debug, "Lua initialized");
 }
@@ -52,13 +61,30 @@ BOYD_API void *BoydInit_Scripting()
     return new boyd::BoydScriptingState();
 }
 
-BOYD_API void BoydUpdate_Scripting(void *state)
+BOYD_API void BoydUpdate_Scripting(void *statePtr)
 {
+    auto *state = GetState(statePtr);
+
+    // Call the update function in the main script, if any
+    luabridge::LuaRef updateFunc = luabridge::getGlobal(state->L, boyd::UPDATE_FUNC_NAME);
+    if(updateFunc.isFunction())
+    {
+        updateFunc();
+    }
 }
 
-BOYD_API void BoydHalt_Scripting(void *state)
+BOYD_API void BoydHalt_Scripting(void *statePtr)
 {
     BOYD_LOG(Info, "Halting scripting module");
+
+    auto *state = GetState(statePtr);
+    // Call the halt function in the main script, if any
+    luabridge::LuaRef haltFunc = luabridge::getGlobal(state->L, boyd::HALT_FUNC_NAME);
+    if(haltFunc.isFunction())
+    {
+        haltFunc();
+    }
+
     delete GetState(state);
 }
 }

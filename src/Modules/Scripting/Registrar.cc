@@ -110,9 +110,9 @@ static int LuaRemoveComponent(lua_State *L)
 template <typename TComponent>
 static int LuaCreateCompRef(lua_State *L)
 {
-    lua_settop(L, 1);                 // Discard all arguments except 1 (self)
-    luaL_checktype(L, 1, LUA_TTABLE); // Ensure first argument is a table
-    lua_getfield(L, 1, "id");         // <-- Get `self.id` --v
+    lua_settop(L, 1); // Discard all arguments except 1 (self)
+    // TODO: Ensure [1] is a LuaEntity userdata?
+    lua_getfield(L, 1, "id"); // <-- Get `self.id` --v
     EntityId entityId = luabridge::Stack<EntityId>::get(L, -1);
 
     // Create the table, fill it and return it
@@ -202,6 +202,13 @@ struct LuaEntity
         return 0;
     }
 
+    /// Checks whether the entity is valid or not.
+    bool IsValid() const
+    {
+        auto *gameState = Boyd_GameState();
+        return gameState->ecs.valid(entt::entity{id});
+    }
+
     /// A LuaCFunction that returns a LuaComponentRef<> given the name of the component.
     /// Lua args:
     /// - self: LuaEntity
@@ -210,9 +217,8 @@ struct LuaEntity
     /// - LuaComponentRef<TComponent, self>, or (nil, <error string>) if invalid component typename
     int LuaGetCompRef(lua_State *L)
     {
-        lua_settop(L, 2);         // Discard all arguments except 2 (self, tname)
-        lua_getfield(L, 1, "id"); // <-- Get `self.entity` --v
-        EntityId entityId = luabridge::Stack<EntityId>::get(L, 1);
+        lua_settop(L, 2); // Discard all arguments except 2 (self, tname)
+        // 1st arg: self
 
         luaL_checkstring(L, 2);                                          // Check that tname is indeed a string
         std::string tname = lua_tostring(L, 2);                          // Get tname
@@ -233,21 +239,22 @@ struct LuaEntity
     }
 
     /// Returns a pretty-printing of the entity.
-    std::string ToString() const
+    std::string
+    ToString() const
     {
         return fmt::format(FMT_STRING("Entity({})"), id);
     }
-};
+}; // namespace boyd
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-void RegisterAllLuaTypes(lua_State *L, BoydScriptingState *state)
+void RegisterAllLuaTypes(BoydScriptingState *state)
 {
     // Add a pointer to `state` to its lua_State so that we can get it back from Lua functions
-    SetLuaScriptingState(L, state);
+    SetLuaScriptingState(state->L, state);
 
     using TRegister = luabridge::Namespace;
-    auto ns = luabridge::getGlobalNamespace(L).beginNamespace(BOYD_NAMESPACE);
+    auto ns = luabridge::getGlobalNamespace(state->L).beginNamespace(BOYD_NAMESPACE);
 
     // Register all types to Lua and their CompRef factories to `compFactory`
 #define BOYD_REGISTER_TYPE(tname)                   \
@@ -263,6 +270,7 @@ void RegisterAllLuaTypes(lua_State *L, BoydScriptingState *state)
         .addStaticCFunction("get", &LuaEntity::LuaGetEntity)
         .addStaticCFunction("destroy", &LuaEntity::LuaDestroyEntity)
         .addCFunction("comp", &LuaEntity::LuaGetCompRef)
+        .addFunction("isvalid", &LuaEntity::IsValid)
         .addFunction("__tostring", &LuaEntity::ToString)
         .addProperty("id", &LuaEntity::id, false)
     .endClass();
