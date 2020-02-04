@@ -100,5 +100,9 @@ int main(void)
     CloseListener();
 #endif
 
+    // Force all modules to be unloaded before the GameState singleton is destroyed.
+    // Important to prevent crashes!
+    modules.clear();
+
     return 0;
 }
