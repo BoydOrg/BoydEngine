@@ -2,7 +2,6 @@
 #include <memory>
 
 #include "BoydEngine.hh"
-#include "Components/Voxels.hh"
 #include "Core/GameState.hh"
 #include "Core/SceneManager.hh"
 #include "Debug/Log.hh"
@@ -98,10 +97,21 @@ int main(void)
 
 #ifdef BOYD_HOT_RELOADING
     CloseListener();
-#endif
 
+    // HACK(PAOLO) If hot reloading is enabled, teardown should follow this order:
+    // 1) Halt each of the modules - but do NOT `dlclose()` their libraries
+    // 2) Delete the GameState
+    // 3) `dlclose()` all modules
+    // Failure to follow this sequence can currently result in crashes-on-exit due to `dlclose()`d libraries!
+    for(auto &module : modules)
+    {
+        module.HaltFunc(module.data);
+        module.HaltFunc = nullptr;
+    }
+    GameStateManager::Instance().~GameStateManager();
+#endif
     // Force all modules to be unloaded before the GameState singleton is destroyed.
-    // Important to prevent crashes!
+    // Important to prevent crashes on exit!
     modules.clear();
 
     return 0;
