@@ -15,7 +15,10 @@ struct BoydVoxelState
         // (= when its voxels need to be remeshed)
         observer.connect(gameState->ecs, entt::collector.group<comp::Voxels, comp::VoxelsDirty>());
     }
-    ~BoydVoxelState() = default;
+    ~BoydVoxelState()
+    {
+        observer.disconnect();
+    }
 };
 
 inline static BoydVoxelState *GetState(void *statePtr)

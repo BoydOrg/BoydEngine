@@ -67,11 +67,18 @@ endmacro()
 boyd_module(NAME Scripting PRIORITY 1
     SOURCES Scripting/Scripting.cc Scripting/Registrar.cc
     LINKS LuaBridge ${BOYD_LUA}
+          # NOTE: Scripting module needs to link to some header-only libs to expose them to Lua
+          polyvox
 )
 
 boyd_module(NAME Audio PRIORITY 20
     SOURCES Audio/Audio.cc Audio/Utils.cc
     LINKS FLAC FLAC++ OpenAL
+)
+
+boyd_module(NAME Voxel PRIORITY 98
+    SOURCES Voxel/Voxel.cc
+    LINKS polyvox
 )
 
 boyd_module(NAME Gfx PRIORITY 99

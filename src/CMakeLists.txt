@@ -19,7 +19,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     raylib
     fmt::fmt
     glm
-    polyvox
 )
 
 # Generate BoydBuildConfig.hh by compiling & running BoydBuildUtil
