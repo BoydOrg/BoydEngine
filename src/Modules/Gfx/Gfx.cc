@@ -11,6 +11,7 @@
 /// TODO: add state transfer
 struct BoydGfxState
 {
+    bool isCursorLocked;
 };
 
 inline BoydGfxState *GetState(void *state)
@@ -18,11 +19,30 @@ inline BoydGfxState *GetState(void *state)
     return reinterpret_cast<BoydGfxState *>(state);
 }
 
+void FlipCursorGrabbing(BoydGfxState *state)
+{
+    state->isCursorLocked ^= true;
+}
+
+void SetCursor(BoydGfxState *state)
+{
+    if(state->isCursorLocked)
+        DisableCursor();
+    else
+        EnableCursor();
+}
 extern "C" {
 BOYD_API void *BoydInit_Gfx()
 {
     BOYD_LOG(Info, "Starting Gfx module");
-    return new BoydGfxState;
+    auto *gfxState = new BoydGfxState;
+
+#ifdef DEBUG
+    gfxState->isCursorLocked = false;
+#else
+    gfxState->isCursorLocked = true;
+#endif
+    return gfxState;
 }
 
 BOYD_API void BoydUpdate_Gfx(void *state)
@@ -36,11 +56,21 @@ BOYD_API void BoydUpdate_Gfx(void *state)
         mainCamera = &camera.camera;
     });
 
+#ifdef DEBUG
+    if(IsKeyPressed(KEY_U) || (!gfxState->isCursorLocked && IsMouseButtonDown(MOUSE_LEFT_BUTTON)))
+    {
+        FlipCursorGrabbing(gfxState);
+    }
+    SetCursor(gfxState);
+#endif
+
     ClearBackground(BLACK);
 
     // Use Raylib's automatic camera management for us
     ::UpdateCamera(mainCamera);
     ::BeginMode3D(*mainCamera);
+
+    DrawPlane({0.0f, 0.0f, 0.0f}, {200.0f, 200.0f}, GREEN);
 
     entt_state->ecs.view<boyd::comp::Transform, boyd::comp::Mesh>()
         .each([state](auto entity, auto &transform, boyd::comp::Mesh &mesh) {
