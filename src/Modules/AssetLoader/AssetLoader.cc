@@ -111,7 +111,7 @@ private:
             {
                 std::unique_lock<std::mutex> lock{workToDoMutex};
                 workToDoCondVar.wait(lock, [this]() {
-                    return running.load() && !workToDo.empty();
+                    return !running.load() || workToDo.empty();
                 });
                 if(!running)
                 {
