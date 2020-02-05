@@ -69,6 +69,11 @@ boyd_module(NAME Scripting PRIORITY 1
     LINKS LuaBridge ${BOYD_LUA}
 )
 
+boyd_module(NAME AssetLoader PRIORITY 2
+    SOURCES AssetLoader/AssetLoader.cc
+            AssetLoader/AllLoaders.cc
+)
+
 boyd_module(NAME Audio PRIORITY 20
     SOURCES Audio/Audio.cc Audio/Utils.cc
     LINKS FLAC FLAC++ OpenAL
