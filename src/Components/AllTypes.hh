@@ -2,7 +2,7 @@
 
 // TODO: Find a way to automate this(?!)
 
-#include "../../Components/Transform.hh"
+#include "Transform.hh"
 
 /// Massive macro containing all types to register to the scripting system
 /// (as `BOYD_REGISTER_TYPE(<typename>)` entries)

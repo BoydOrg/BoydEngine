@@ -4,7 +4,7 @@
 #include <fmt/format.h>
 #include <string>
 
-#include "AllTypes.hh"
+#include "../../Components/AllTypes.hh"
 
 // NOTE: The "LuaEntity" mentioned below is a Lua table type that contains:
 // - entity: boyd::EntityId - The id of the entity
