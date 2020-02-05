@@ -23,14 +23,15 @@ include(Lua.cmake)
 # glm - https://github.com/g-truc/glm - License: MIT + Happy Bunny License
 add_subdirectory(glm/)
 
-# OpenAL Soft - https://github.com/kcat/openal-soft/ - License: LGPL
+# OpenAL Soft - https://github.com/kcat/openal-soft/ - License: LGPLv2
 set(ALSOFT_BACKEND_SDL2 OFF CACHE BOOL "" FORCE) # disable SDL2 mixer
 set(ALSOFT_EXAMPLES OFF CACHE BOOL "" FORCE)     # Examples use SDL1 which cause us redefinition issues with raylib
 add_subdirectory(openal-soft)
 
-# Tinywav - https://github.com/mhroth/tinywav - License: MIT
-add_library(tinywav STATIC tinywav/tinywav.c)
-target_include_directories(tinywav PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/tinywav")
+# FreeALUT - https://github.com/vancegroup/freealut - License: LGPLv2
+option(BUILD_EXAMPLES "" OFF)
+option(BUILD_TESTS "" ON)
+
 
 # Xiph's Flac - https://github.com/janbar/flac-cmake - based on xiph/flac - License: Xiph's License + LGPL + GPL + FDL
 set(BUILD_DOCS OFF CACHE BOOL "" FORCE) # Disable docs generation
