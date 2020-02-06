@@ -51,7 +51,6 @@ BOYD_API void *BoydInit_Gfx()
 BOYD_API void BoydUpdate_Gfx(void *state)
 {
     boyd::GameState *entt_state = Boyd_GameState();
-
     auto *gfxState = GetState(state);
     Camera *mainCamera;
 
@@ -83,11 +82,20 @@ BOYD_API void BoydUpdate_Gfx(void *state)
 
     // Use Raylib's automatic camera management for us
     ::UpdateCamera(mainCamera);
+
+    ::BeginDrawing();
     ::BeginMode3D(*mainCamera);
+
+    auto rl2glmVec3 = [](const ::Vector3 vec) {
+        return glm::vec3{vec.x, vec.y, vec.z};
+    };
+
+    auto view = glm::lookAt(rl2glmVec3(mainCamera->position), rl2glmVec3(mainCamera->target), rl2glmVec3(mainCamera->up));
+    ::SetMatrixModelview(*reinterpret_cast<const ::Matrix *>(&view));
 
     if(skybox && gfxState->renderSkybox)
     {
-        DrawModel(skybox->raylibSkyboxModel, (Vector3){0, 0, 0}, 1.0f, WHITE);
+        DrawModel(skybox->rlSkyboxModel, (Vector3){0, 0, 0}, 1.0f, WHITE);
     }
 
     DrawPlane({0.0f, -4.0f, 0.0f}, {200.0f, 200.0f}, GREEN);

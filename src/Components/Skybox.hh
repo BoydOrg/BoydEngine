@@ -12,35 +12,33 @@ namespace comp
 /// A 3D transform relative to world-space
 struct BOYD_API Skybox
 {
-    std::string skyboxAsset;
+    ::Model rlSkyboxModel;
+    ::Mesh rlSkyboxMesh;
 
-    ::Model raylibSkyboxModel;
-    ::Mesh raylibSkyboxMesh;
-
-    /// Init a Skydome
-    Skybox(std::string skyboxAsset)
-        : skyboxAsset{skyboxAsset}
+    Skybox(std::string hdrFilepath)
     {
+        // Create Skybox mesh; set its material (shader) and texture binding points correctly
+        rlSkyboxMesh = GenMeshCube(1.0f, 1.0f, 1.0f);
+        rlSkyboxModel = LoadModelFromMesh(rlSkyboxMesh);
 
-        // Get a dome image as an equirectangular map
-        // Run a shader to
-        raylibSkyboxMesh = GenMeshCube(1.0f, 1.0f, 1.0f);
-        raylibSkyboxModel = LoadModelFromMesh(raylibSkyboxMesh);
-        raylibSkyboxModel.materials[0].shader = LoadShader("assets/Shaders/Skybox.vs", "assets/Shaders/Skybox.fs");
+        rlSkyboxModel.materials[0].shader = LoadShader("assets/Shaders/Skybox.vs", "assets/Shaders/Skybox.fs");
+        static constexpr const int CUBEMAP_BINDPOINT = MAP_CUBEMAP;
+        SetShaderValue(rlSkyboxModel.materials[0].shader,
+                       GetShaderLocation(rlSkyboxModel.materials[0].shader, "environmentMap"),
+                       &CUBEMAP_BINDPOINT, UNIFORM_INT);
 
-        auto uniformValue = MAP_CUBEMAP;
-        auto targetTexture = 0;
-        SetShaderValue(raylibSkyboxModel.materials[0].shader,
-                       GetShaderLocation(raylibSkyboxModel.materials[0].shader, "environmentMap"),
-                       &uniformValue, UNIFORM_INT);
-
+        // Convert HDR equirectangular map to cubemap
         Shader shdrCubeMap = LoadShader("assets/Shaders/Cubemap.vs", "assets/Shaders/Cubemap.fs");
-        SetShaderValue(shdrCubeMap, GetShaderLocation(shdrCubeMap, "equirectangularMap"), &targetTexture, UNIFORM_INT);
-        Texture2D texHDR = LoadTexture(skyboxAsset.c_str());
-
-        raylibSkyboxModel.materials[0].maps[MAP_CUBEMAP].texture = GenTextureCubemap(shdrCubeMap, texHDR, 512);
+        static constexpr const int TEXTURE_UNIT = 0;
+        SetShaderValue(shdrCubeMap, GetShaderLocation(shdrCubeMap, "equirectangularMap"), &TEXTURE_UNIT, UNIFORM_INT);
+        Texture2D texHDR = LoadTexture(hdrFilepath.c_str());
+        rlSkyboxModel.materials[0].maps[MAP_CUBEMAP].texture = GenTextureCubemap(shdrCubeMap, texHDR, 512);
         UnloadTexture(texHDR);
         UnloadShader(shdrCubeMap);
+    }
+    ~Skybox()
+    {
+        UnloadModel(rlSkyboxModel);
     }
 };
 
