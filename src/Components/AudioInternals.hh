@@ -20,7 +20,7 @@ struct BOYD_API AudioInternals
 
         auto &wave = *clip.wave;
         int channels = wave.channels;
-        int sampleRate = wave.sampleCount;
+        int sampleRate = wave.sampleRate;
         int bitsPerSample = wave.sampleSize;
 
         ALenum format;
