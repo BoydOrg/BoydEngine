@@ -2,6 +2,7 @@
 #include "../../Core/Platform.hh"
 #include "../../Debug/Log.hh"
 #include <AL/al.h>
+#include <FLAC/stream_decoder.h>
 #include <fstream>
 #include <memory>
 
@@ -18,6 +19,8 @@ using namespace std;
 #    include <netinet/in.h>
 #endif
 
+// ------------------------------------------------------------------------------------------------
+/// Wav header structure (ish).
 /// See http://soundfile.sapp.org/doc/WaveFormat/
 struct WavHeader
 {
@@ -50,6 +53,56 @@ void boyd::PrintOpenALCError(ALCdevice *device, const char *file, int line)
         BOYD_LOG(Error, "{}", alcGetString(device, error));
 }
 
+ALenum GetFormat(int bitsPerSample, int channels)
+{
+
+    if(channels < 1 || channels >= 2)
+    {
+        BOYD_LOG(Warn, "OpenAL expected 1 or 2 channels, got {}", channels);
+        return -1;
+    }
+    if(bitsPerSample != 8 && bitsPerSample != 16)
+    {
+        BOYD_LOG(Warn, "OpenAL expected a bps rate of 8 or 16, got {}", bitsPerSample);
+        return -1;
+    }
+
+    if(bitsPerSample == 8 && channels == 1)
+        return AL_FORMAT_MONO8;
+    if(bitsPerSample == 16 && channels == 1)
+        return AL_FORMAT_MONO16;
+    if(bitsPerSample == 8 && channels == 2)
+        return AL_FORMAT_STEREO8;
+    if(bitsPerSample == 16 && channels == 2)
+        return AL_FORMAT_STEREO16;
+
+    // Unreached
+    return -1;
+}
+
+/// Generate an OpenAL source from its buffer.
+void GenSourceFromBuffer(AudioSource &audioSource)
+{
+    alGenSources(1, &audioSource.alSource);
+    BOYD_OPENAL_ERROR();
+    alSourcei(audioSource.alSource, AL_BUFFER, audioSource.alBuffer);
+    BOYD_OPENAL_ERROR();
+
+    switch(audioSource.soundType)
+    {
+    case AudioSource::SoundType::SFX:
+        alSourcei(audioSource.alSource, AL_LOOPING, AL_FALSE);
+        break;
+    case AudioSource::SoundType::SFX_LOOPABLE:
+    case AudioSource::SoundType::BGM:
+        alSourcei(audioSource.alSource, AL_LOOPING, AL_TRUE);
+        break;
+    }
+
+    alSourcePlay(audioSource.alSource);
+    BOYD_OPENAL_ERROR();
+}
+
 void boyd::LoadWav(const path &path, AudioSource &audioSource)
 {
     ifstream reader{path, ios_base::binary | ios_base::in};
@@ -80,40 +133,11 @@ void boyd::LoadWav(const path &path, AudioSource &audioSource)
 
     ALenum format, error;
 
-    switch(header.BitsPerSample)
-    {
-    case 8:
-        switch(header.NumChannels)
-        {
-        case 1:
-            format = AL_FORMAT_MONO8;
-            break;
-        case 2:
-            format = AL_FORMAT_MONO16;
-            break;
-        default:
-            BOYD_LOG(Warn, "OpenAL does not support more than 2 channels!");
-            return;
-        }
-        break;
-    case 16:
-        switch(header.NumChannels)
-        {
-        case 1:
-            format = AL_FORMAT_STEREO8;
-            break;
-        case 2:
-            format = AL_FORMAT_STEREO16;
-            break;
-        default:
-            BOYD_LOG(Warn, "OpenAL does not support more than 2 channels!");
-            return;
-        }
-        break;
-    default:
-        BOYD_LOG(Warn, "Bit sample rate {} not supported!", header.BitsPerSample);
+    /// Check the WAV format has the right number of channels and bits per sample
+    format = GetFormat(header.BitsPerSample, header.NumChannels);
+
+    if(format == -1)
         return;
-    }
 
     unique_ptr<uint8_t> data{(uint8_t *)malloc(header.Subchunk2Size)};
     reader.read((char *)data.get(), header.Subchunk2Size);
@@ -124,27 +148,114 @@ void boyd::LoadWav(const path &path, AudioSource &audioSource)
                  header.Subchunk2Size, header.SampleRate);
     BOYD_OPENAL_ERROR();
 
-    alGenSources(1, &audioSource.alSource);
-    BOYD_OPENAL_ERROR();
-    alSourcei(audioSource.alSource, AL_BUFFER, audioSource.alBuffer);
-    BOYD_OPENAL_ERROR();
+    GenSourceFromBuffer(audioSource);
+}
 
-    switch(audioSource.soundType)
-    {
-    case AudioSource::SoundType::SFX:
-        alSourcei(audioSource.alSource, AL_LOOPING, AL_FALSE);
-        break;
-    case AudioSource::SoundType::SFX_LOOPABLE:
-    case AudioSource::SoundType::BGM:
-        alSourcei(audioSource.alSource, AL_LOOPING, AL_TRUE);
-        break;
-    }
+// ------------------------------------------------------------------------------------------------
 
-    alSourcePlay(audioSource.alSource);
-    BOYD_OPENAL_ERROR();
+/// Copy the buffer from the decoded FLAC stream to an OpenAL buffer
+/// `decoder` - a FLAC decoder
+/// `frame` - a FLAC frame
+/// `buffer` - an uncompressed PCM buffer
+/// `client_data` - a data structure that acts as a sink
+FLAC__StreamDecoderWriteStatus writeCallback(const FLAC__StreamDecoder *decoder,
+                                             const FLAC__Frame *frame,
+                                             const FLAC__int32 *const buffer[],
+                                             void *client_data);
+
+void errorCallback(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data)
+{
+    (void)decoder, (void)client_data;
+
+    BOYD_LOG(Error, "Got error callback: {}", FLAC__StreamDecoderErrorStatusString[status]);
 }
 
 void boyd::LoadFlac(const path &path, AudioSource &audioSource)
 {
-    BOYD_LOG(Error, "FLAC loading not yet implemented");
+    FLAC__StreamDecoder *decoder = nullptr;
+
+    if(!(decoder = FLAC__stream_decoder_new()))
+    {
+        BOYD_LOG(Error, "Could not allocate a FLAC decoder");
+        return;
+    }
+
+    (void)FLAC__stream_decoder_set_md5_checking(decoder, true);
+
+    auto init_status = FLAC__stream_decoder_init_file(decoder, path.c_str(), writeCallback, nullptr, errorCallback, &audioSource);
+
+    if(init_status != FLAC__STREAM_DECODER_INIT_STATUS_OK)
+    {
+        BOYD_LOG(Error, "Failed to initialize an audio stream: {}", FLAC__StreamDecoderInitStatusString[init_status]);
+        return;
+    }
+    bool ok = FLAC__stream_decoder_process_until_end_of_stream(decoder);
+    BOYD_LOG(Debug, "Decoding {}: {}", ok ? "succeeded" : "FAILED");
+    BOYD_LOG(Debug, "   state: {}", FLAC__StreamDecoderStateString[FLAC__stream_decoder_get_state(decoder)]);
+
+    FLAC__stream_decoder_delete(decoder);
+
+    GenSourceFromBuffer(audioSource);
+}
+
+FLAC__StreamDecoderWriteStatus writeCallback(const FLAC__StreamDecoder *decoder,
+                                             const FLAC__Frame *frame,
+                                             const FLAC__int32 *const buffer[],
+                                             void *client_data)
+{
+    AudioSource *audioSource = (AudioSource *)client_data;
+
+    if(!frame)
+    {
+        BOYD_LOG(Error, "Cannot read the header of this flac file.");
+        return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
+    }
+
+    int channels = frame->header.channels;
+    int bitsPerSample = frame->header.bits_per_sample;
+    int totalSamples = frame->header.number.sample_number;
+
+    ALenum format = GetFormat(bitsPerSample, channels);
+
+    const FLAC__uint32 total_size = (FLAC__uint32)(totalSamples * channels * (bitsPerSample / 8));
+    const size_t bytesPerSampleMono = bitsPerSample / 8;
+
+    bool ok = true;
+    if(format == -1)
+    {
+        BOYD_LOG(Error, "Unrecognized format, aborting");
+        ok = false;
+    }
+    else if(!buffer[0])
+    {
+        BOYD_LOG(Error, "Null buffer[0] detected");
+        ok = false;
+    }
+    else if(channels == 2 && !buffer[1])
+    {
+        BOYD_LOG(Error, "Null buffer[1] detected");
+        ok = false;
+    }
+
+    if(!ok)
+        return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
+
+    unique_ptr<uint8_t> data{new uint8_t[total_size]};
+
+    // Iterate over all frames
+    for(size_t i = 0; i < frame->header.blocksize; i++)
+    {
+        for(size_t channel = 0; channel < channels; channel++)
+            memcpy(data.get() + i * bytesPerSampleMono * (channel + 1), &buffer[channel][i], bytesPerSampleMono);
+    }
+
+    alGenBuffers(1, &audioSource->alBuffer);
+    BOYD_OPENAL_ERROR();
+    alBufferData(audioSource->alBuffer, format, data.get(),
+                 total_size, frame->header.sample_rate);
+    BOYD_OPENAL_ERROR();
+
+    GenSourceFromBuffer(*audioSource);
+
+    return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
 }
