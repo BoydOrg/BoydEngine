@@ -2,7 +2,7 @@
 
 #include "../Core/Platform.hh"
 #include <memory>
-#include <raylib/raudio.h>
+#include <raylib.h>
 
 namespace boyd
 {
@@ -32,10 +32,10 @@ struct BOYD_API AudioClip
     AudioClip &operator=(AudioClip &&toMove) = default;
 
 private:
-    static void WaveDeleter(Wave &wave)
+    static void WaveDeleter(Wave *wave)
     {
-        ::UnloadWave(wave);
-        wave.data = nullptr;
+        ::UnloadWave(*wave);
+        wave->data = nullptr;
     }
 };
 

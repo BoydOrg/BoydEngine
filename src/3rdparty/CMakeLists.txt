@@ -7,7 +7,6 @@ add_subdirectory(entt/)
 # Raylib - https://github.com/raysan5/raylib - License: BSD
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # avoid building examples
 set(BUILD_GAMES OFF CACHE BOOL "" FORCE)    # or games
-set(USE_AUDIO OFF CACHE BOOL "" FORCE)      # or the audio module as we already use OpenAL-soft
 set(OSS_LIBRARY "" CACHE STRING "" FORCE)   # disable OSS (as audio is disabled)
 add_subdirectory(raylib/)
 

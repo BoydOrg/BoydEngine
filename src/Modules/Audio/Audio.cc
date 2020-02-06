@@ -1,3 +1,5 @@
+#include "../../Components/AudioClip.hh"
+#include "../../Components/AudioInternals.hh"
 #include "../../Components/AudioSource.hh"
 #include "../../Components/Camera.hh"
 #include "../../Components/Transform.hh"
@@ -12,8 +14,10 @@
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
+#include <tuple>
 #include <vector>
 
+#include <type_traits>
 using namespace boyd;
 
 /// TODO: add state transfer
@@ -21,6 +25,9 @@ struct BoydAudioState
 {
     ALCcontext *context;
     ALCdevice *device;
+
+    entt::observer entt_clipAndSource;
+
     bool isEnabled{true};
 
     BoydAudioState()
@@ -41,7 +48,7 @@ struct BoydAudioState
         }
         else
         {
-            // Load some extensions
+            // Load all available extensions, similarly to GLEW for OpenGL.
             const char *name = nullptr;
             if(alcIsExtensionPresent(device, "ALC_ENUMERATE_ALL_EXT"))
                 name = alcGetString(device, ALC_ALL_DEVICES_SPECIFIER);
@@ -49,6 +56,11 @@ struct BoydAudioState
                 name = alcGetString(device, ALC_DEVICE_SPECIFIER);
 
             BOYD_LOG(Debug, "OpenAL extension detected: {}", name);
+
+            auto &registry = Boyd_GameState()->ecs;
+
+            entt_clipAndSource.connect(registry, entt::collector.group<boyd::comp::AudioClip,
+                                                                       boyd::comp::AudioSource>());
         }
     }
     ~BoydAudioState()
@@ -72,97 +84,75 @@ inline BoydAudioState *GetState(void *state)
     return reinterpret_cast<BoydAudioState *>(state);
 }
 
-void OnAudioSourceRegister(entt::registry &registry, entt::entity entity)
-{
-    auto &audioSource = registry.get<boyd::comp::AudioSource>(entity);
-
-    std::filesystem::path assetFile{audioSource.assetFile};
-    auto extension = assetFile.extension().string();
-
-    BOYD_LOG(Info, "Loading audio asset {}", assetFile.string());
-
-    if(extension == ".wav")
-    {
-        boyd::LoadWav(assetFile, audioSource);
-    }
-    else if(extension == ".flac")
-    {
-        boyd::LoadFlac(assetFile, audioSource);
-    }
-    else
-    {
-        BOYD_LOG(Warn, "Unknown audio format: {}", assetFile.string());
-    }
-}
-
-void OnAudioSourceDeregister(entt::registry &registry, entt::entity entity)
-{
-    auto &audioSource = registry.get<boyd::comp::AudioSource>(entity);
-
-    alDeleteSources(1, &audioSource.alSource);
-    alDeleteBuffers(1, &audioSource.alBuffer);
-}
-
 extern "C" {
 BOYD_API void *BoydInit_Audio()
 {
     BOYD_LOG(Info, "Starting Audio module");
-    auto *audioState = new BoydAudioState();
-    auto &registry = Boyd_GameState()->ecs;
-    registry.on_construct<boyd::comp::AudioSource>().connect<OnAudioSourceRegister>();
-    registry.on_destroy<boyd::comp::AudioSource>().connect<OnAudioSourceDeregister>();
-
-    return audioState;
+    return new BoydAudioState();
 }
 
 BOYD_API void BoydUpdate_Audio(void *state)
 {
-    auto *AudioState = GetState(state);
+    auto *audioState = GetState(state);
     entt::registry &registry = Boyd_GameState()->ecs;
-    if(!AudioState->isEnabled)
+
+    auto entt_clipAndSourceView = registry.view<boyd::comp::AudioClip, boyd::comp::AudioSource>();
+    auto entt_transform = registry.view<boyd::comp::AudioSource, boyd::comp::AudioInternals, boyd::comp::Transform>();
+
+    if(!audioState->isEnabled)
     {
-        // Delete all the audiosources. The worst case is a memory leak of audio sources
+        // Delete all the audiosources. Keep the ECS clean
         auto view = registry.view<boyd::comp::AudioSource>();
         registry.destroy(view.begin(), view.end());
     }
     else
     {
-        auto view = registry.view<boyd::comp::AudioSource, boyd::comp::Transform>();
+        // Register new pairs <AudioSource, AudioClip> if any
+        for(const auto entity : audioState->entt_clipAndSource)
+        {
+            auto tuple = entt_clipAndSourceView.get<boyd::comp::AudioClip, boyd::comp::AudioSource>(entity);
+            boyd::comp::AudioClip &clip = std::get<0>(tuple);
+            boyd::comp::AudioSource &source = std::get<1>(tuple);
+            boyd::comp::AudioInternals &internals = registry.get_or_assign<boyd::comp::AudioInternals>(entity, clip);
+        }
 
-        boyd::comp::Camera *camera;
-
+        boyd::comp::Camera *camera = nullptr;
         registry.view<boyd::comp::Camera>().each([&camera](entt::entity entity, auto &cameraComp) { camera = &cameraComp; });
-        /// TODO: Replace camera.position with the corresponding transform
-        alListenerfv(AL_POSITION, (const ALfloat *)&(camera->camera.target));
-        BOYD_OPENAL_ERROR();
 
-        Vector3 orientation[] = {camera->camera.target, camera->camera.up};
-        alListenerfv(AL_ORIENTATION, (const ALfloat *)orientation);
-        BOYD_OPENAL_ERROR();
+        /// TODO: Replace camera.position with the corresponding transform
+        if(camera)
+        {
+            alListenerfv(AL_POSITION, (const ALfloat *)&(camera->camera.position));
+            BOYD_OPENAL_ERROR();
+
+            Vector3 orientation[] = {camera->camera.target, camera->camera.up};
+            alListenerfv(AL_ORIENTATION, (const ALfloat *)orientation);
+            BOYD_OPENAL_ERROR();
+        }
 
         std::vector<entt::entity> flushPool;
 
-        view.each([&flushPool](entt::entity entity, boyd::comp::AudioSource &audioSource, boyd::comp::Transform &transform) {
-            /// if the audio element is a SFX and the reproduction stream has run out, delete it.
+        entt_transform.each([&flushPool](entt::entity entity, auto &source, auto &internals, auto &transform) {
+            /// If the audio element is a SFX and the reproduction stream has run out, delete it.
             ALenum state;
 
-            alGetSourcei(audioSource.alSource, AL_SOURCE_STATE, &state);
-            BOYD_OPENAL_ERROR();
+            alGetSourcei(internals.source, AL_SOURCE_STATE, &state);
 
-            if(audioSource.soundType == boyd::comp::AudioSource::SoundType::SFX && state == AL_STOPPED)
+            if(source.soundType == boyd::comp::AudioSource::SoundType::SFX && state == AL_STOPPED)
             {
-                BOYD_LOG(Debug, "Evicting asset {}", audioSource.assetFile);
                 flushPool.push_back(entity);
             }
-            else if(audioSource.soundType != boyd::comp::AudioSource::SoundType::BGM)
+            else if(source.soundType != boyd::comp::AudioSource::SoundType::BGM)
             {
+                /// ENRICO: strangely my compiler (GCC 9.2.0) decided to crash if I tried to create
+                /// the arrays on the fly. I did not submit a report though 'cause I am a bad kid.
                 glm::vec3 translation = glm::vec3(transform.matrix[3]);
+                ALfloat zeroArray[3] = {0.0f, 0.0f, 0.0f};
 
                 // Position is given only by the translation right now
-                // Also, Audio sources are omnidirectional
-                alSourcefv(audioSource.alSource, AL_POSITION, (const ALfloat *)&translation);
+                alSourcefv(internals.source, AL_POSITION, (const ALfloat *)&translation);
                 BOYD_OPENAL_ERROR();
-                alSourcefv(audioSource.alSource, AL_DIRECTION, (const ALfloat *)(float[3]){0, 0, 0});
+                alSourcefv(internals.source, AL_DIRECTION, zeroArray);
                 BOYD_OPENAL_ERROR();
             }
         });
@@ -176,7 +166,6 @@ BOYD_API void BoydHalt_Audio(void *state)
 {
     BOYD_LOG(Info, "Halting AudioState module");
     auto &registry = Boyd_GameState()->ecs;
-    registry.on_construct<boyd::comp::AudioSource>().disconnect<OnAudioSourceRegister>();
     delete GetState(state);
 }
 }
