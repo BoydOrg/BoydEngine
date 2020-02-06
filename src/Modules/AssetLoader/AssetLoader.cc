@@ -42,9 +42,10 @@ class BOYD_API BoydAssetLoaderState
     std::atomic<bool> running;
 
     // Input queue, to `workerThread`
-    std::deque<JobToLoad> workToDo;
-    std::mutex workToDoMutex;
-    std::condition_variable workToDoCondVar;
+    std::deque<JobToLoad> jobs;
+    std::atomic<bool> hasJobs; // NOTE: To be able to know if `jobs.empty()` without locking `jobsMutex`!
+    std::mutex jobsMutex;
+    std::condition_variable jobsCondVar;
 
     // Output queue, from `workerThread`
     std::deque<LoadedJob> loadedAssets;
@@ -55,23 +56,24 @@ public:
     entt::observer loadReqObserver;
 
     BoydAssetLoaderState(entt::registry &ecs)
+        : jobs{}, loadedAssets{}, loadReqObserver{ecs, entt::collector.group<comp::LoadRequest>()}
     {
         RegisterAllLoaders(loaders);
         BOYD_LOG(Debug, "Asset loaders registered");
 
+        hasJobs = false;
         running = true;
         workerThread = std::thread(&BoydAssetLoaderState::WorkerLoop, this);
         BOYD_LOG(Debug, "Asset loading thread started");
-
-        loadReqObserver.connect(ecs, entt::collector.group<comp::LoadRequest>());
     }
 
     ~BoydAssetLoaderState()
     {
         loadReqObserver.disconnect();
 
+        hasJobs = true; // Fake having a new job to awake the worker thread from its `wait()`
         running = false;
-        workToDoCondVar.notify_one();
+        jobsCondVar.notify_one();
         workerThread.join();
         BOYD_LOG(Debug, "Asset loading thread stopped");
     }
@@ -80,10 +82,11 @@ public:
     void AddJob(JobToLoad &&job)
     {
         {
-            std::unique_lock<std::mutex> lock{workToDoMutex};
-            workToDo.emplace_back(std::move(job));
+            std::unique_lock<std::mutex> lock{jobsMutex};
+            jobs.emplace_back(std::move(job));
+            hasJobs = true;
         }
-        workToDoCondVar.notify_one();
+        jobsCondVar.notify_one();
     }
 
     /// Attach all components that were loaded by to their respective entities in the `ECS`.
@@ -109,16 +112,16 @@ private:
             // Pop a job from the queue (waiting for one if there isn't any)...
             JobToLoad job;
             {
-                std::unique_lock<std::mutex> lock{workToDoMutex};
-                workToDoCondVar.wait(lock, [this]() {
-                    return !running.load() || workToDo.empty();
+                std::unique_lock<std::mutex> lock{jobsMutex};
+                jobsCondVar.wait(lock, [this]() {
+                    return hasJobs.load();
                 });
                 if(!running)
                 {
                     break;
                 }
-                job = workToDo.front();
-                workToDo.pop_front();
+                job = jobs.front();
+                jobs.pop_front();
             }
 
             // ...then execute it...
