@@ -2,9 +2,9 @@
 #include "../../Core/GameState.hh"
 #include "../../Core/Platform.hh"
 #include "../../Debug/Log.hh"
-#include "AllLoaders.hh"
 #include "LoadedAsset.hh"
 #include "Loader.hh"
+#include "Loaders/AllLoaders.hh"
 
 #include <atomic>
 #include <condition_variable>
