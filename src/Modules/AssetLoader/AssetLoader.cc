@@ -90,6 +90,7 @@ public:
     }
 
     /// Attach all components that were loaded by to their respective entities in the `ECS`.
+    /// Also detachs the LoadRequest on the component!
     /// Returns the number of components that were attached.
     size_t AttachLoadedAssets(entt::registry &ecs)
     {
@@ -98,7 +99,14 @@ public:
         for(; !loadedAssets.empty(); nApplied++)
         {
             auto &jobResult = loadedAssets.front();
-            jobResult.loadedAsset->AssignComponent(ecs, jobResult.target);
+            if(ecs.valid(jobResult.target))
+            {
+                jobResult.loadedAsset->AssignComponent(ecs, jobResult.target);
+                if(ecs.has<comp::LoadRequest>(jobResult.target))
+                {
+                    ecs.remove<comp::LoadRequest>(jobResult.target);
+                }
+            }
             loadedAssets.pop_front();
         }
         return nApplied;
