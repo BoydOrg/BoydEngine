@@ -56,7 +56,7 @@ void boyd::PrintOpenALCError(ALCdevice *device, const char *file, int line)
 ALenum GetFormat(int bitsPerSample, int channels)
 {
 
-    if(channels < 1 || channels >= 2)
+    if(channels < 1 || channels > 2)
     {
         BOYD_LOG(Warn, "OpenAL expected 1 or 2 channels, got {}", channels);
         return -1;
@@ -153,6 +153,12 @@ void boyd::LoadWav(const path &path, AudioSource &audioSource)
 
 // ------------------------------------------------------------------------------------------------
 
+struct FLACData
+{
+    AudioSource *audioSource;
+    ALCcontext *context;
+};
+
 /// Copy the buffer from the decoded FLAC stream to an OpenAL buffer
 /// `decoder` - a FLAC decoder
 /// `frame` - a FLAC frame
@@ -182,7 +188,9 @@ void boyd::LoadFlac(const path &path, AudioSource &audioSource)
 
     (void)FLAC__stream_decoder_set_md5_checking(decoder, true);
 
-    auto init_status = FLAC__stream_decoder_init_file(decoder, path.c_str(), writeCallback, nullptr, errorCallback, &audioSource);
+    FLACData context = {&audioSource, alcGetCurrentContext()};
+
+    auto init_status = FLAC__stream_decoder_init_file(decoder, path.c_str(), writeCallback, nullptr, errorCallback, &context);
 
     if(init_status != FLAC__STREAM_DECODER_INIT_STATUS_OK)
     {
@@ -203,7 +211,7 @@ FLAC__StreamDecoderWriteStatus writeCallback(const FLAC__StreamDecoder *decoder,
                                              const FLAC__int32 *const buffer[],
                                              void *client_data)
 {
-    AudioSource *audioSource = (AudioSource *)client_data;
+    FLACData *context = (FLACData *)client_data;
 
     if(!frame)
     {
@@ -249,13 +257,15 @@ FLAC__StreamDecoderWriteStatus writeCallback(const FLAC__StreamDecoder *decoder,
             memcpy(data.get() + i * bytesPerSampleMono * (channel + 1), &buffer[channel][i], bytesPerSampleMono);
     }
 
-    alGenBuffers(1, &audioSource->alBuffer);
+    alcMakeContextCurrent(context->context);
     BOYD_OPENAL_ERROR();
-    alBufferData(audioSource->alBuffer, format, data.get(),
+    alGenBuffers(1, &(context->audioSource->alBuffer));
+    BOYD_OPENAL_ERROR();
+    alBufferData(context->audioSource->alBuffer, format, data.get(),
                  total_size, frame->header.sample_rate);
     BOYD_OPENAL_ERROR();
 
-    GenSourceFromBuffer(*audioSource);
+    GenSourceFromBuffer(*(context->audioSource));
 
     return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
 }
