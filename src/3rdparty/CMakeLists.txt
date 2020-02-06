@@ -31,11 +31,6 @@ add_subdirectory(openal-soft)
 option(BUILD_EXAMPLES "" OFF)
 option(BUILD_TESTS "" ON)
 
-
-# Xiph's Flac - https://github.com/janbar/flac-cmake - based on xiph/flac - License: Xiph's License + LGPL + GPL + FDL
-set(BUILD_DOCS OFF CACHE BOOL "" FORCE) # Disable docs generation
-add_subdirectory(flac)
-
 # Polyvox - https://bitbucket.org/volumesoffun/polyvox.git - License: zlib
 set(ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(ENABLE_DOCS OFF CACHE BOOL "" FORCE)
