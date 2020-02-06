@@ -1,4 +1,6 @@
 #include "../../Components/AudioSource.hh"
+#include "../../Components/Camera.hh"
+#include "../../Components/Transform.hh"
 #include "../../Core/GameState.hh"
 #include "../../Core/Platform.hh"
 #include "../../Debug/Log.hh"
@@ -8,6 +10,9 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <filesystem>
+#include <glm/glm.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
+#include <vector>
 
 using namespace boyd;
 
@@ -113,9 +118,58 @@ BOYD_API void *BoydInit_Audio()
 BOYD_API void BoydUpdate_Audio(void *state)
 {
     auto *AudioState = GetState(state);
+    entt::registry &registry = Boyd_GameState()->ecs;
     if(!AudioState->isEnabled)
     {
-        return;
+        // Delete all the audiosources. The worst case is a memory leak of audio sources
+        auto view = registry.view<boyd::comp::AudioSource>();
+        registry.destroy(view.begin(), view.end());
+    }
+    else
+    {
+        auto view = registry.view<boyd::comp::AudioSource, boyd::comp::Transform>();
+
+        boyd::comp::Camera *camera;
+
+        registry.view<boyd::comp::Camera>().each([&camera](entt::entity entity, auto &cameraComp) { camera = &cameraComp; });
+        /// TODO: Replace camera.position with the corresponding transform
+        alListenerfv(AL_POSITION, (const ALfloat *)&(camera->camera.target));
+
+        Vector3 orientation[] = {camera->camera.target, camera->camera.up};
+        alListenerfv(AL_ORIENTATION, (const ALfloat *)orientation);
+
+        std::vector<entt::entity> flushPool;
+
+        view.each([&flushPool](entt::entity entity, boyd::comp::AudioSource &audioSource, boyd::comp::Transform &transform) {
+            /// if the audio element is a SFX and the reproduction stream has run out, delete it.
+            ALenum state;
+
+            alGetSourcei(audioSource.alSource, AL_SOURCE_STATE, &state);
+
+            if(audioSource.soundType == boyd::comp::AudioSource::SoundType::SFX && state == AL_STOPPED)
+            {
+                flushPool.push_back(entity);
+            }
+            else if(audioSource.soundType != boyd::comp::AudioSource::SoundType::BGM)
+            {
+                // take the source position
+                glm::mat4 transformation;
+                glm::vec3 scale;
+                glm::quat rotation;
+                glm::vec3 translation;
+                glm::vec3 skew;
+                glm::vec4 perspective;
+                glm::decompose(transformation, scale, rotation, translation, skew, perspective);
+
+                // Position is given only by the translation right now
+                // Also, Audio sources are omnidirectional
+                alSourcefv(audioSource.alSource, AL_POSITION, (const ALfloat *)&translation);
+                alSourcefv(audioSource.alSource, AL_DIRECTION, (const ALfloat *)(float[3]){0, 0, 0});
+            }
+        });
+
+        for(auto entity : flushPool)
+            registry.destroy(entity);
     }
 }
 
@@ -123,7 +177,7 @@ BOYD_API void BoydHalt_Audio(void *state)
 {
     BOYD_LOG(Info, "Halting AudioState module");
     auto &registry = Boyd_GameState()->ecs;
-    //registry.on_construct<boyd::comp::AudioSource>().disconnect<OnAudioSourceRegister>();
+    // registry.on_construct<boyd::comp::AudioSource>().disconnect<OnAudioSourceRegister>();
     delete GetState(state);
 }
 }

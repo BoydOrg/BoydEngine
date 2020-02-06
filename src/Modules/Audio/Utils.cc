@@ -134,6 +134,7 @@ void boyd::LoadWav(const path &path, AudioSource &audioSource)
     case AudioSource::SoundType::SFX:
         alSourcei(audioSource.alSource, AL_LOOPING, AL_FALSE);
         break;
+    case AudioSource::SoundType::SFX_LOOPABLE:
     case AudioSource::SoundType::BGM:
         alSourcei(audioSource.alSource, AL_LOOPING, AL_TRUE);
         break;
