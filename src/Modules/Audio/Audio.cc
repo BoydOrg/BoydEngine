@@ -114,6 +114,18 @@ BOYD_API void BoydUpdate_Audio(void *state)
             boyd::comp::AudioClip &clip = std::get<0>(tuple);
             boyd::comp::AudioSource &source = std::get<1>(tuple);
             boyd::comp::AudioInternals &internals = registry.get_or_assign<boyd::comp::AudioInternals>(entity, clip);
+
+            switch(source.soundType)
+            {
+            case boyd::comp::AudioSource::SoundType::SFX_LOOPABLE:
+            case boyd::comp::AudioSource::SoundType::BGM:
+                alSourcei(internals.source, AL_LOOPING, AL_TRUE);
+                break;
+            case boyd::comp::AudioSource::SoundType::SFX:
+                alSourcei(internals.source, AL_LOOPING, AL_FALSE);
+            }
+            alSourcePlay(internals.source);
+            BOYD_OPENAL_ERROR();
         }
 
         boyd::comp::Camera *camera = nullptr;
