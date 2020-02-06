@@ -53,15 +53,8 @@ int main(void)
     (void)GameStateManager::Instance();
     (void)SceneManager::Instance();
 
-    // Initialization
-    //--------------------------------------------------------------------------------------
-    const int screenWidth = 800;
-    const int screenHeight = 450;
-
-    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
-
-    SetTargetFPS(60); // Set our game to run at 60 frames-per-second
-    //--------------------------------------------------------------------------------------
+    InitWindow(800, 600, "BoydEngine");
+    SetTargetFPS(200); // Add a sensible frame limiter
 
 #ifdef BOYD_HOT_RELOADING
     SetListener("lib/", 100);
@@ -72,28 +65,11 @@ int main(void)
     // Main game loop
     while(!WindowShouldClose()) // Detect window close button or ESC key
     {
-        // Technically this is a bad breach of any game loop rule, but Gfx makes drawing call
-        // inside the updat method.
-        BeginDrawing();
+        // NOTE: Gfx is treated as a normal system (it makes drawcalls inside of its update() method).
         UpdateModules();
-        // Update
-        //----------------------------------------------------------------------------------
-        // TODO: Update your variables here
-        //----------------------------------------------------------------------------------
-
-        // Draw
-        //----------------------------------------------------------------------------------
-
-        //DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
-
-        EndDrawing();
-        //----------------------------------------------------------------------------------
     }
 
-    // De-Initialization
-    //--------------------------------------------------------------------------------------
     CloseWindow(); // Close window and OpenGL context
-    //--------------------------------------------------------------------------------------
 
 #ifdef BOYD_HOT_RELOADING
     CloseListener();
