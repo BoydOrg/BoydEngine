@@ -8,6 +8,13 @@ namespace boyd
 
 struct LoadedAssetBase
 {
+    ENTT_ID_TYPE typeId; ///< Type id of the wrapped TAsset.
+
+    LoadedAssetBase(ENTT_ID_TYPE typeId)
+        : typeId{typeId}
+    {
+    }
+
     virtual ~LoadedAssetBase() = default;
 
     /// Assign(/replace) the loaded component to the EnTT entity `target`.
@@ -21,7 +28,7 @@ struct LoadedAsset : public LoadedAssetBase
     TAsset asset;
 
     LoadedAsset(TAsset &&asset)
-        : asset{std::move(asset)}
+        : LoadedAssetBase(entt::type_info<TAsset>::id()), asset{std::move(asset)}
     {
     }
     ~LoadedAsset() = default;

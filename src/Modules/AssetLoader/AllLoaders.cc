@@ -1,6 +1,6 @@
 #include "AllLoaders.hh"
 
-#include "../../Components/LoadRequest.hh"
+#include "../../Components/ComponentLoadRequest.hh"
 
 namespace boyd
 {
@@ -17,7 +17,7 @@ struct Loader<std::string>
 
 void RegisterAllLoaders(LoaderMap &map)
 {
-    map[comp::LoadRequest::TypeOf<std::string>()] = &Loader<std::string>::Load;
+    map[comp::ComponentLoadRequest::TypeOf<std::string>()] = &Loader<std::string>::Load;
 }
 
 } // namespace boyd

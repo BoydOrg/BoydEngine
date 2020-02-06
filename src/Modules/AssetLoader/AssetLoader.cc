@@ -1,4 +1,4 @@
-#include "../../Components/LoadRequest.hh"
+#include "../../Components/ComponentLoadRequest.hh"
 #include "../../Core/GameState.hh"
 #include "../../Core/Platform.hh"
 #include "../../Debug/Log.hh"
@@ -17,11 +17,20 @@ namespace boyd
 {
 
 /// A request to load an asset.
-struct JobToLoad
+struct LoadJob
 {
     entt::entity target;  ///< The entity to load the component for.
-    std::string filepath; ///< Path of the file containing the asset.
     ENTT_ID_TYPE typeId;  ///< EnTT typeId of the component to be set in `target`.
+    std::string filepath; ///< Path of the file containing the asset.
+
+    LoadJob()
+        : target{entt::null}, typeId{}, filepath{}
+    {
+    }
+    LoadJob(entt::entity target, ENTT_ID_TYPE typeId, std::string filepath)
+        : target{target}, typeId{typeId}, filepath{filepath}
+    {
+    }
 };
 
 /// An asset that was loaded
@@ -42,7 +51,7 @@ class BOYD_API BoydAssetLoaderState
     std::atomic<bool> running;
 
     // Input queue, to `workerThread`
-    std::deque<JobToLoad> jobs;
+    std::deque<LoadJob> jobs;
     std::atomic<bool> hasJobs; // NOTE: To be able to know if `jobs.empty()` without locking `jobsMutex`!
     std::mutex jobsMutex;
     std::condition_variable jobsCondVar;
@@ -56,7 +65,7 @@ public:
     entt::observer loadReqObserver;
 
     BoydAssetLoaderState(entt::registry &ecs)
-        : jobs{}, loadedAssets{}, loadReqObserver{ecs, entt::collector.group<comp::LoadRequest>()}
+        : jobs{}, loadedAssets{}, loadReqObserver{ecs, entt::collector.group<comp::ComponentLoadRequest>()}
     {
         RegisterAllLoaders(loaders);
         BOYD_LOG(Debug, "Asset loaders registered");
@@ -78,12 +87,15 @@ public:
         BOYD_LOG(Debug, "Asset loading thread stopped");
     }
 
-    /// Adds a new job for the loader thread to load.
-    void AddJob(JobToLoad &&job)
+    /// Adds new jobs for the loader thread to load depending on a `LoadRequest`.
+    void AddJobs(entt::entity target, const comp::ComponentLoadRequest &loadReq)
     {
         {
             std::unique_lock<std::mutex> lock{jobsMutex};
-            jobs.emplace_back(std::move(job));
+            for(auto &it : loadReq.requests)
+            {
+                jobs.emplace_back(target, it.first, it.second);
+            }
             hasJobs = true;
         }
         jobsCondVar.notify_one();
@@ -94,6 +106,8 @@ public:
     /// Returns the number of components that were attached.
     size_t AttachLoadedAssets(entt::registry &ecs)
     {
+        using CompReq = comp::ComponentLoadRequest;
+
         std::unique_lock<std::mutex> lock{loadedAssetsMutex};
         size_t nApplied = 0;
         for(; !loadedAssets.empty(); nApplied++)
@@ -102,10 +116,6 @@ public:
             if(ecs.valid(jobResult.target))
             {
                 jobResult.loadedAsset->AssignComponent(ecs, jobResult.target);
-                if(ecs.has<comp::LoadRequest>(jobResult.target))
-                {
-                    ecs.remove<comp::LoadRequest>(jobResult.target);
-                }
             }
             loadedAssets.pop_front();
         }
@@ -118,7 +128,7 @@ private:
         while(running)
         {
             // Pop a job from the queue (waiting for one if there isn't any)...
-            JobToLoad job;
+            LoadJob job;
             {
                 std::unique_lock<std::mutex> lock{jobsMutex};
                 jobsCondVar.wait(lock, [this]() {
@@ -145,6 +155,7 @@ private:
                 BOYD_LOG(Error, "Error loading {} (component typeId={})", job.filepath, job.typeId);
                 continue;
             }
+            BOYD_LOG(Debug, "Loaded {} for entity={}, typeId={}", job.filepath, job.target, job.typeId);
 
             // ...and finally post the results to the main thread
             {
@@ -154,7 +165,6 @@ private:
         }
     }
 };
-
 } // namespace boyd
 
 inline static boyd::BoydAssetLoaderState *GetState(void *state)
@@ -175,10 +185,13 @@ BOYD_API void BoydUpdate_AssetLoader(void *statePtr)
     auto *gameState = Boyd_GameState();
     auto *state = GetState(statePtr);
 
-    // Each time a load request component is added: enqueue a load request into the worker thread
+    // Each time a load request component is added:
+    // - Enqueue a load request into the worker thread
+    // - Remove the load request from the requester
     state->loadReqObserver.each([state, gameState](auto entity) {
-        auto loadReq = gameState->ecs.get<boyd::comp::LoadRequest>(entity);
-        state->AddJob({entity, loadReq.filepath, loadReq.componentType});
+        const auto &loadReq = gameState->ecs.get<boyd::comp::ComponentLoadRequest>(entity);
+        state->AddJobs(entity, loadReq);
+        gameState->ecs.remove<boyd::comp::ComponentLoadRequest>(entity);
     });
 
     // Then, for each asset that was loaded, attach it to the right entity in the ECS
