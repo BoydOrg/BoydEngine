@@ -36,14 +36,14 @@ struct WavHeader
     uint32_t Subchunk2Size;
 };
 
-void boyd::PrintOpenALError()
+void boyd::PrintOpenALError(const char *file, int line)
 {
     ALenum error = alGetError();
     if(error != AL_NO_ERROR)
-        BOYD_LOG(Warn, "{}", alGetString(error));
+        BOYD_LOG(Warn, "In {}:{} -> {}", alGetString(error));
 }
 
-void boyd::PrintOpenALCError(ALCdevice *device)
+void boyd::PrintOpenALCError(ALCdevice *device, const char *file, int line)
 {
     ALCenum error = alcGetError(device);
     if(error != ALC_NO_ERROR)
@@ -119,15 +119,15 @@ void boyd::LoadWav(const path &path, AudioSource &audioSource)
     reader.read((char *)data.get(), header.Subchunk2Size);
 
     alGenBuffers(1, &audioSource.alBuffer);
-    PrintOpenALError();
+    BOYD_OPENAL_ERROR();
     alBufferData(audioSource.alBuffer, format, data.get(),
                  header.Subchunk2Size, header.SampleRate);
-    PrintOpenALError();
+    BOYD_OPENAL_ERROR();
 
     alGenSources(1, &audioSource.alSource);
-    PrintOpenALError();
+    BOYD_OPENAL_ERROR();
     alSourcei(audioSource.alSource, AL_BUFFER, audioSource.alBuffer);
-    PrintOpenALError();
+    BOYD_OPENAL_ERROR();
 
     switch(audioSource.soundType)
     {
@@ -141,7 +141,7 @@ void boyd::LoadWav(const path &path, AudioSource &audioSource)
     }
 
     alSourcePlay(audioSource.alSource);
-    PrintOpenALError();
+    BOYD_OPENAL_ERROR();
 }
 
 void boyd::LoadFlac(const path &path, AudioSource &audioSource)

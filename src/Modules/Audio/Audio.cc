@@ -28,14 +28,14 @@ struct BoydAudioState
         if(!(device = alcOpenDevice(nullptr)))
         {
             BOYD_LOG(Error, "Could not access the device");
-            PrintOpenALCError(device);
+            BOYD_OPENALC_ERROR(device);
             BOYD_LOG(Error, "Audio will be disabled");
             isEnabled = false;
         }
         else if(!(context = alcCreateContext(device, nullptr)) || alcMakeContextCurrent(context) == ALC_FALSE)
         {
             BOYD_LOG(Error, "Could not create an OpenAL context. Audio will be muted.");
-            PrintOpenALCError(device);
+            BOYD_OPENALC_ERROR(device);
             BOYD_LOG(Error, "Audio will be disabled");
             isEnabled = false;
         }
@@ -134,9 +134,11 @@ BOYD_API void BoydUpdate_Audio(void *state)
         registry.view<boyd::comp::Camera>().each([&camera](entt::entity entity, auto &cameraComp) { camera = &cameraComp; });
         /// TODO: Replace camera.position with the corresponding transform
         alListenerfv(AL_POSITION, (const ALfloat *)&(camera->camera.target));
+        BOYD_OPENAL_ERROR();
 
         Vector3 orientation[] = {camera->camera.target, camera->camera.up};
         alListenerfv(AL_ORIENTATION, (const ALfloat *)orientation);
+        BOYD_OPENAL_ERROR();
 
         std::vector<entt::entity> flushPool;
 
@@ -145,26 +147,23 @@ BOYD_API void BoydUpdate_Audio(void *state)
             ALenum state;
 
             alGetSourcei(audioSource.alSource, AL_SOURCE_STATE, &state);
+            BOYD_OPENAL_ERROR();
 
             if(audioSource.soundType == boyd::comp::AudioSource::SoundType::SFX && state == AL_STOPPED)
             {
+                BOYD_LOG(Debug, "Evicting asset {}", audioSource.assetFile);
                 flushPool.push_back(entity);
             }
             else if(audioSource.soundType != boyd::comp::AudioSource::SoundType::BGM)
             {
-                // take the source position
-                glm::mat4 transformation;
-                glm::vec3 scale;
-                glm::quat rotation;
-                glm::vec3 translation;
-                glm::vec3 skew;
-                glm::vec4 perspective;
-                glm::decompose(transformation, scale, rotation, translation, skew, perspective);
+                glm::vec3 translation = glm::vec3(transform.matrix[3]);
 
                 // Position is given only by the translation right now
                 // Also, Audio sources are omnidirectional
                 alSourcefv(audioSource.alSource, AL_POSITION, (const ALfloat *)&translation);
+                BOYD_OPENAL_ERROR();
                 alSourcefv(audioSource.alSource, AL_DIRECTION, (const ALfloat *)(float[3]){0, 0, 0});
+                BOYD_OPENAL_ERROR();
             }
         });
 
@@ -177,7 +176,7 @@ BOYD_API void BoydHalt_Audio(void *state)
 {
     BOYD_LOG(Info, "Halting AudioState module");
     auto &registry = Boyd_GameState()->ecs;
-    // registry.on_construct<boyd::comp::AudioSource>().disconnect<OnAudioSourceRegister>();
+    registry.on_construct<boyd::comp::AudioSource>().disconnect<OnAudioSourceRegister>();
     delete GetState(state);
 }
 }
