@@ -15,10 +15,14 @@ namespace comp
 struct BOYD_API Mesh
 {
     /// Internally managed by Raylib, do not touch!
+    std::string modelName;
+    std::string textureName;
+
     Model model;
     Texture2D texture;
 
     Mesh(std::string modelName, std::string textureName = "")
+        : modelName{modelName}, textureName{textureName}
     {
         model = LoadModel(modelName.c_str());
         /*
