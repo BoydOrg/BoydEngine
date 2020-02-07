@@ -44,7 +44,13 @@ add_subdirectory(polyvox)
 add_library(polyvox INTERFACE)
 target_include_directories(polyvox INTERFACE ${PolyVoxHeaders_SOURCE_DIR})
 
-# tinyglft - https://bitbucket.org/volumesoffun/polyvox.git - License: zlib
+# tinygltf - https://github.com/syoyo/tinygltf - License: MIT
 set(TINYGLTF_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_library(tinygltf INTERFACE)
 target_include_directories(tinygltf INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/tinygltf/")
+
+# glfw - https://github.com/glfw/glfw - License: zlib
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+add_subdirectory(glfw/)

@@ -35,3 +35,6 @@
 [submodule "src/3rdparty/tinygltf"]
 	path = src/3rdparty/tinygltf
 	url = https://github.com/syoyo/tinygltf
+[submodule "src/3rdparty/glfw"]
+	path = src/3rdparty/glfw
+	url = https://github.com/glfw/glfw
