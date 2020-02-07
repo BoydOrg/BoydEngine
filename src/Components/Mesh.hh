@@ -3,36 +3,40 @@
 #include "../Core/Platform.hh"
 #include <entt/entt.hpp>
 #include <glm/glm.hpp>
-#include <raylib.h>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace boyd
 {
 namespace comp
 {
 
-/// A 3D transform relative to world-space
+/// A indexed, triangulated mesh.
 struct BOYD_API Mesh
 {
-    /// Internally managed by Raylib, do not touch!
-    std::string modelName;
-    std::string textureName;
-
-    Model model;
-    Texture2D texture;
-
-    Mesh(std::string modelName, std::string textureName = "")
-        : modelName{modelName}, textureName{textureName}
+    struct Vertex
     {
-        model = LoadModel(modelName.c_str());
-        /*
-        if(textureName.size())
-        {
-            texture = LoadTexture(textureName.c_str());
-            SetMaterialTexture(&model.materials[0], MAP_DIFFUSE, texture);
-        }
-        */
+        glm::vec3 position;
+        glm::vec3 normal;
+        glm::vec4 tintEmission; ///< RGB: tint, A: emission
+        glm::vec2 texCoord;
+    };
+    using Index = unsigned;
+
+    struct Data
+    {
+        std::vector<Vertex> vertices;
+        std::vector<Index> indices;
+    };
+    std::shared_ptr<Data> data;
+
+    /// Creates a new, empty mesh.
+    Mesh()
+        : data{std::make_shared<Data>()}
+    {
     }
+    ~Mesh() = default;
 };
 
 } // namespace comp

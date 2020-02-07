@@ -31,5 +31,5 @@ void boyd::SceneManager::LoadScene(const std::filesystem::path &scene)
 
     auto object = registry.create();
     registry.assign<boyd::comp::Transform>(object, glm::identity<glm::mat4>());
-    registry.assign<boyd::comp::Mesh>(object, "assets/GLTF/SuzanneColor0.glb");
+    //registry.assign<boyd::comp::Mesh>(object, "assets/GLTF/SuzanneColor0.glb");
 }
