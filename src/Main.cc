@@ -22,39 +22,15 @@ BOYD_MODULES_LIST()
 
 using namespace boyd;
 
-#include "raylib.h"
-
-/// Raylib logging handler.
-static void raylibLog(int msgType, const char *fmt, va_list args)
-{
-    static const LogLevel RAYLIB_TO_BOYD_LOGLEVEL[] = {
-        LogLevel::Debug, // LOG_ALL
-        LogLevel::Debug, // LOG_TRACE
-        LogLevel::Debug, // LOG_DEBUG
-        LogLevel::Info,  // LOG_INFO
-        LogLevel::Warn,  // LOG_WARNING
-        LogLevel::Error, // LOG_ERROR
-        LogLevel::Crit,  // LOG_FATAL
-    };
-    static char buffer[256];
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
-    buffer[255] = '\0';
-    Log::instance().log(RAYLIB_TO_BOYD_LOGLEVEL[msgType], "<raylib>", 0, buffer);
-}
-
 int main(void)
 {
     BOYD_LOG(Debug, "BoydEngine v{}.{}", BOYD_VERSION_MAJOR, BOYD_VERSION_MINOR);
 
     BOYD_MODULES_LIST();
-    SetTraceLogCallback(raylibLog);
 
     // Make sure game state is inited
     (void)GameStateManager::Instance();
     (void)SceneManager::Instance();
-
-    InitWindow(800, 600, "BoydEngine");
-    SetTargetFPS(200); // Add a sensible frame limiter
 
 #ifdef BOYD_HOT_RELOADING
     SetListener("lib/", 100);
@@ -63,13 +39,11 @@ int main(void)
     SceneManager::LoadScene("res/scene/1.scene");
 
     // Main game loop
-    while(!WindowShouldClose()) // Detect window close button or ESC key
+    while(true) // FIXME: readd quitting...
     {
         // NOTE: Gfx is treated as a normal system (it makes drawcalls inside of its update() method).
         UpdateModules();
     }
-
-    CloseWindow(); // Close window and OpenGL context
 
 #ifdef BOYD_HOT_RELOADING
     CloseListener();

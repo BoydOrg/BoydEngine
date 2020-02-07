@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Platform.hh"
+#include <atomic>
 #include <entt/entt.hpp>
 
 namespace boyd
@@ -9,7 +10,13 @@ namespace boyd
 /// The whole game state, shared among modules.
 struct BOYD_API GameState
 {
-    entt::registry ecs; ///< The EnTT ECS.
+    std::atomic<bool> running; ///< Set to false to request the loop to exit.
+    entt::registry ecs;        ///< The EnTT ECS.
+
+    GameState()
+        : running{true}, ecs{}
+    {
+    }
 };
 
 /// A singleton used to manage a `GameState`.
