@@ -18,9 +18,53 @@ namespace boyd
 /// TODO: add state transfer
 struct BoydGfxState
 {
+    GLFWwindow *window;
+
     /// Maps all mesh data to its respective OpenGL mesh info.
     /// This is so implicit sharing for mesh data works seamlessly - if the mesh data is identical it should go on the GPU just once!
     std::unordered_map<comp::Mesh::Data *, GLMesh> meshMap;
+
+    BoydGfxState()
+    {
+        BOYD_LOG(Debug, "Initializing GLFW");
+        if(!glfwInit())
+        {
+            const char *error;
+            int errorCode = glfwGetError(&error);
+            BOYD_LOG(Error, "Failed to init GLFW: [{}] {}", errorCode, error);
+            return;
+        }
+
+        BOYD_LOG(Debug, "Creating GLFW window");
+
+        glfwWindowHint(GLFW_RESIZABLE, true);
+        // Request OpenGL ES 3
+        glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_OPENGL_ES_API);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+
+        window = glfwCreateWindow(800, 600, "BoydEngine", nullptr, nullptr);
+        if(!window)
+        {
+            const char *error;
+            int errorCode = glfwGetError(&error);
+            BOYD_LOG(Error, "Failed to create GLFW window: [{}] {}", errorCode, error);
+            return;
+        }
+        glfwMakeContextCurrent(window);
+
+        BOYD_LOG(Debug, "OpenGL: {} ({})", glGetString(GL_VERSION), glGetString(GL_VENDOR));
+    }
+
+    ~BoydGfxState()
+    {
+        if(window)
+        {
+            glfwDestroyWindow(window);
+            window = nullptr;
+        }
+        glfwTerminate();
+    }
 };
 
 } // namespace boyd
@@ -44,8 +88,15 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
 {
     GameState *gameState = Boyd_GameState();
     auto *gfxState = GetState(statePtr);
+    if(!gfxState->window)
+    {
+        // Can't to much without a window
+        return;
+    }
 
-    glm::vec2 screenSize{GetScreenWidth(), GetScreenHeight()};
+    int screenW, screenH;
+    glfwGetFramebufferSize(gfxState->window, &screenW, &screenH);
+    glm::vec2 screenSize{screenW, screenH};
 
     // TODO: Need a way to actually pick what camera to use - find the camera tagged "MainCamera"?
     auto cameraView = gameState->ecs.view<comp::Camera, comp::ActiveCamera>();
@@ -82,13 +133,15 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
         viewMtx = glm::inverse(viewMtx); // Inverse, because this is a camera view matrix!
     }
 
-    const comp::Skybox *skybox = nullptr;
-    if(gameState->ecs.has<comp::Skybox>(cameraEntity))
-    {
-        skybox = &gameState->ecs.get<comp::Skybox>(cameraEntity);
-    }
+    // TODO comp::Skybox *skybox = nullptr;
+    // TODO if(gameState->ecs.has<comp::Skybox>(cameraEntity))
+    // TODO {
+    // TODO     skybox = &gameState->ecs.get<comp::Skybox>(cameraEntity);
+    // TODO }
 
     // -------------------------------------------------------------------------
+
+    glfwMakeContextCurrent(gfxState->window);
 
     // FIXME: BIND THE SHADER PROGRAM FOR MESHES!
     // FIXME: ONLY RENDER MESHES WITH MESHRENDERERS COMPONENTS IN THEM!
@@ -122,6 +175,12 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
     glUseProgram(0);
 
     // -------------------------------------------------------------------------
+
+    glfwSwapBuffers(gfxState->window);
+
+    // Poll input at end of frame to minimize delay between the Gfx system running (that should be the last one in the sequence)
+    // and the next frame
+    glfwPollEvents();
 }
 
 BOYD_API void BoydHalt_Gfx(void *state)

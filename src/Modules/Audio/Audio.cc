@@ -154,12 +154,14 @@ BOYD_API void BoydUpdate_Audio(void *state)
         /// TODO: Replace camera.position with the corresponding transform
         if(camera)
         {
-            alListenerfv(AL_POSITION, (const ALfloat *)&(camera->camera.position));
-            BOYD_OPENAL_ERROR();
-
-            Vector3 orientation[] = {camera->camera.target, camera->camera.up};
-            alListenerfv(AL_ORIENTATION, (const ALfloat *)orientation);
-            BOYD_OPENAL_ERROR();
+            // FIXME - get camera position and orientation from its transform!
+            //
+            //alListenerfv(AL_POSITION, (const ALfloat *)&(camera->camera.position));
+            //BOYD_OPENAL_ERROR();
+            //
+            //Vector3 orientation[] = {camera->camera.target, camera->camera.up};
+            //alListenerfv(AL_ORIENTATION, (const ALfloat *)orientation);
+            //BOYD_OPENAL_ERROR();
         }
 
         std::vector<entt::entity> flushPool;
