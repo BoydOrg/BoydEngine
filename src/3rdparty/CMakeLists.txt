@@ -32,7 +32,6 @@ add_subdirectory(openal-soft)
 option(BUILD_EXAMPLES "" OFF)
 option(BUILD_TESTS "" ON)
 
-
 # Xiph's Flac - https://github.com/janbar/flac-cmake - based on xiph/flac - License: Xiph's License + LGPL + GPL + FDL
 set(BUILD_DOCS OFF CACHE BOOL "" FORCE) # Disable docs generation
 add_subdirectory(flac)
@@ -44,3 +43,8 @@ set(ENABLE_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(polyvox)
 add_library(polyvox INTERFACE)
 target_include_directories(polyvox INTERFACE ${PolyVoxHeaders_SOURCE_DIR})
+
+# tinyglft - https://bitbucket.org/volumesoffun/polyvox.git - License: zlib
+set(TINYGLTF_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_library(tinygltf INTERFACE)
+target_include_directories(tinygltf INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/tinygltf/")
