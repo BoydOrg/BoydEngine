@@ -7,6 +7,7 @@ namespace boyd
 
 /// The list of all registered loadable types, one BOYD_LOADER(TComp) per line.
 /// This registers each boyd::Loader<TComp> template, as defined in "AssetLoader/Loader.hh".
+
 #define BOYD_ALL_LOADERS()          \
     BOYD_LOADER(boyd::comp::String) \
     BOYD_LOADER(boyd::comp::AudioClip)

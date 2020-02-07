@@ -12,8 +12,10 @@ namespace boyd
 
 void RegisterAllLoaders(LoaderMap &map)
 {
-    map[comp::ComponentLoadRequest::TypeOf<comp::String>()] = &Loader<comp::String>::Load;
-    map[comp::ComponentLoadRequest::TypeOf<comp::AudioClip>()] = &Loader<comp::AudioClip>::Load;
+#define BOYD_LOADER(component) \
+    map[comp::ComponentLoadRequest::TypeOf<component>()] = &Loader<component>::Load;
+
+    BOYD_ALL_LOADERS()
 }
 
 } // namespace boyd
