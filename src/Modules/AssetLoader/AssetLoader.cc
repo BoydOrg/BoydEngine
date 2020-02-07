@@ -140,6 +140,10 @@ private:
                 }
                 job = jobs.front();
                 jobs.pop_front();
+                if(jobs.empty())
+                {
+                    hasJobs = false;
+                }
             }
 
             // ...then execute it...

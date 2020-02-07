@@ -2,7 +2,6 @@
 
 #include "../Core/Platform.hh"
 #include <memory>
-#include <raylib.h>
 
 namespace boyd
 {
@@ -29,7 +28,7 @@ struct BOYD_API AudioClip
 
     /// Creates an audioclip from the given Wave.
     /// WARNING: It will be automatically `UnloadWave()`d by the component!
-    explicit AudioClip(Wave wave)
+    AudioClip(Wave &&wave)
         : wave{wave}
     {
     }

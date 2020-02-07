@@ -5,12 +5,14 @@
 #include "../Components/AudioClip.hh"
 #include "../Components/AudioSource.hh"
 #include "../Components/Camera.hh"
+#include "../Components/ComponentLoadRequest.hh"
 #include "../Components/Mesh.hh"
 #include "../Components/Skybox.hh"
 #include "../Components/Transform.hh"
 #include "GameState.hh"
 #include "MusicAssetLoader.hh"
 #include "SceneManager.hh"
+#include <utility>
 
 extern "C" boyd::SceneManagerState *Boyd_SceneManager()
 {
@@ -43,7 +45,9 @@ void boyd::SceneManager::LoadScene(const std::filesystem::path &scene)
             glm::mat4 modelMatrix = transMatrix * rotationMatrix;
 
             registry.assign<boyd::comp::Transform>(entity, modelMatrix);
-            registry.assign<boyd::comp::AudioClip>(entity, boyd::LoadWav("assets/WAV/xp.wav"));
+            // registry.assign<boyd::comp::AudioClip>(entity, boyd::LoadWav("assets/WAV/xp.wav"));
+            boyd::comp::ComponentLoadRequest req{{boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::AudioClip>(), "assets/WAV/xp.wav"}};
+            registry.assign<boyd::comp::ComponentLoadRequest>(entity, std::move(req));
             registry.assign<boyd::comp::AudioSource>(entity, boyd::comp::AudioSource::SoundType::SFX_LOOPABLE);
 
             //registry.assign<boyd::comp::AudioSource>(entity, "assets/WAV/xp.wav",
