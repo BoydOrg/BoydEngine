@@ -7,7 +7,7 @@ namespace boyd
 {
 
 /// A mesh that is loaded on the GPU.
-class GLMesh
+struct GLMesh
 {
     GLuint vao;
     GLuint vbo;
@@ -15,7 +15,7 @@ class GLMesh
 };
 
 /// A material that is loaded on the GPU.
-class GLMaterial
+struct GLMaterial
 {
     GLuint program;
     GLuint texture;

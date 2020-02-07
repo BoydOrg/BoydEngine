@@ -6,40 +6,30 @@
 #include "../../Components/Mesh.hh"
 #include "../../Components/Skybox.hh"
 #include "../../Components/Transform.hh"
+#include "GL3.hh"
+#include "GfxComponents.hh"
 
 #include <entt/entt.hpp>
-#include <raylib.h>
-#include <rlgl.h>
+#include <unordered_map>
 
-using namespace boyd;
+namespace boyd
+{
 
 /// TODO: add state transfer
 struct BoydGfxState
 {
-    bool isCursorLocked;
+    /// Maps all mesh data to its respective OpenGL mesh info.
+    /// This is so implicit sharing for mesh data works seamlessly - if the mesh data is identical it should go on the GPU just once!
+    std::unordered_map<comp::Mesh::Data *, GLMesh> meshMap;
 };
+
+} // namespace boyd
+
+using namespace boyd;
 
 inline BoydGfxState *GetState(void *state)
 {
-    return reinterpret_cast<BoydGfxState *>(state);
-}
-
-void FlipCursorGrabbing(BoydGfxState *state)
-{
-    state->isCursorLocked ^= true;
-}
-
-void SetCursor(BoydGfxState *state)
-{
-    if(state->isCursorLocked)
-        DisableCursor();
-    else
-        EnableCursor();
-}
-
-inline static ::Matrix Glm2RLMat4(const glm::mat4 &mat)
-{
-    return *reinterpret_cast<const ::Matrix *>(&mat);
+    return reinterpret_cast<boyd::BoydGfxState *>(state);
 }
 
 extern "C" {
@@ -47,20 +37,13 @@ extern "C" {
 BOYD_API void *BoydInit_Gfx()
 {
     BOYD_LOG(Info, "Starting Gfx module");
-    auto *gfxState = new BoydGfxState;
-
-#ifdef DEBUG
-    gfxState->isCursorLocked = false;
-#else
-    gfxState->isCursorLocked = true;
-#endif
-    return gfxState;
+    return new BoydGfxState;
 }
 
-BOYD_API void BoydUpdate_Gfx(void *state)
+BOYD_API void BoydUpdate_Gfx(void *statePtr)
 {
     GameState *gameState = Boyd_GameState();
-    auto *gfxState = GetState(state);
+    auto *gfxState = GetState(statePtr);
 
     glm::vec2 screenSize{GetScreenWidth(), GetScreenHeight()};
 
@@ -107,34 +90,38 @@ BOYD_API void BoydUpdate_Gfx(void *state)
 
     // -------------------------------------------------------------------------
 
-    ::BeginDrawing();
-    ::ClearBackground(BLACK);
-
-    // --- Raylib+glm setup code - based on BeginMode3D() ----------------------
-    rlMatrixMode(RL_PROJECTION); // Save the current 2D projection matrix so that `::EndMode3D()` can restore it later
-    rlPushMatrix();
-
-    rlglDraw();
-    SetMatrixProjection(Glm2RLMat4(projMtx));
-    SetMatrixModelview(Glm2RLMat4(viewMtx));
-    rlEnableDepthTest();
-    // -------------------------------------------------------------------------
-
-    if(skybox)
-    {
-        DrawModel(skybox->rlSkyboxModel, (Vector3){0, 0, 0}, 1.0f, WHITE);
-    }
+    // FIXME: BIND THE SHADER PROGRAM FOR MESHES!
+    // FIXME: ONLY RENDER MESHES WITH MESHRENDERERS COMPONENTS IN THEM!
 
     gameState->ecs.view<comp::Transform, comp::Mesh>()
-        .each([state](auto entity, const auto &transform, auto &mesh) {
-            memcpy(&mesh.model.transform, &transform.matrix, sizeof(::Matrix));
-            DrawModel(mesh.model, (Vector3){0, 6.0f, 0}, 1.0f, WHITE);
+        .each([gfxState](auto entity, const auto &transform, auto &mesh) {
+            // Find if we have the OpenGL state for this mesh data;
+            // if not, upload it to GPU.
+            auto gpuMeshIt = gfxState->meshMap.find(mesh.data.get());
+            GLMesh *gpuMesh;
+            if(gpuMeshIt != gfxState->meshMap.end())
+            {
+                gpuMesh = &gpuMeshIt->second;
+            }
+            else
+            {
+                GLMesh gpuMeshInstance;
+                bool uploadOk = gl3::UploadMesh(mesh, gpuMeshInstance);
+                if(!uploadOk)
+                {
+                    BOYD_LOG(Warn, "Failed to upload mesh to GPU");
+                    return;
+                }
+                gpuMesh = &(gfxState->meshMap[mesh.data.get()] = std::move(gpuMeshInstance));
+            }
+
+            glBindVertexArray(gpuMesh->vao);
+            glDrawElements(GL_TRIANGLES, mesh.data->indices.size(), GL_UNSIGNED_INT, nullptr);
         });
 
-    // -------------------------------------------------------------------------
+    glUseProgram(0);
 
-    ::EndMode3D();
-    ::EndDrawing();
+    // -------------------------------------------------------------------------
 }
 
 BOYD_API void BoydHalt_Gfx(void *state)
