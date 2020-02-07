@@ -38,3 +38,6 @@ set(ENABLE_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(polyvox)
 add_library(polyvox INTERFACE)
 target_include_directories(polyvox INTERFACE ${PolyVoxHeaders_SOURCE_DIR})
+
+# ReactPhysics3dd - https://github.com/DanielChappuis/reactphysics3d - License: zlib
+add_subdirectory(reactphysics3d)
