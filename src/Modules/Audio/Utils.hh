@@ -2,6 +2,7 @@
 
 namespace boyd
 {
+
 /// -- Do not use this directly! Use the macro BOYD_OPENAL_ERROR instead. --
 void PrintOpenALError(const char *file, int line);
 

@@ -1,7 +1,8 @@
 add_executable(BoydEngine WIN32
     Main.cc
     Core/GameState.cc
-    Core/SceneManager.cc
+    Core/SceneManager.cc # To be removed when the full asset loader is working
+    Core/MusicAssetLoader.cc # Same as above
     Modules/Loader.cc
 
     # Add this header here to make sure BoydBuildUtil gets compiled and run

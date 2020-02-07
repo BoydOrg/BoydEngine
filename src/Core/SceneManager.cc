@@ -2,12 +2,14 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
+#include "../Components/AudioClip.hh"
 #include "../Components/AudioSource.hh"
 #include "../Components/Camera.hh"
 #include "../Components/Mesh.hh"
 #include "../Components/Skybox.hh"
 #include "../Components/Transform.hh"
 #include "GameState.hh"
+#include "MusicAssetLoader.hh"
 #include "SceneManager.hh"
 
 extern "C" boyd::SceneManagerState *Boyd_SceneManager()
@@ -28,7 +30,7 @@ void boyd::SceneManager::LoadScene(const std::filesystem::path &scene)
         auto entity = state->entities.back();
         if(i == 0)
         {
-            registry.assign<boyd::comp::Camera>(entity, Vector3{0.0f, 0.0f, 0.0f}, 45.0f, CAMERA_PERSPECTIVE);
+            registry.assign<boyd::comp::Camera>(entity, Vector3{10.0f, 10.0f, 10.0f}, 45.0f, CAMERA_PERSPECTIVE);
             registry.assign<boyd::comp::Skybox>(entity, "assets/Textures/dresden_square.hdr");
         }
         else
@@ -41,9 +43,11 @@ void boyd::SceneManager::LoadScene(const std::filesystem::path &scene)
             glm::mat4 modelMatrix = transMatrix * rotationMatrix;
 
             registry.assign<boyd::comp::Transform>(entity, modelMatrix);
+            registry.assign<boyd::comp::AudioClip>(entity, boyd::LoadWav("assets/WAV/xp.wav"));
+            registry.assign<boyd::comp::AudioSource>(entity, boyd::comp::AudioSource::SoundType::SFX_LOOPABLE);
 
-            registry.assign<boyd::comp::AudioSource>(entity, "assets/WAV/xp.wav",
-                                                     boyd::comp::AudioSource::SoundType::SFX_LOOPABLE);
+            //registry.assign<boyd::comp::AudioSource>(entity, "assets/WAV/xp.wav",
+            //                                         boyd::comp::AudioSource::SoundType::SFX_LOOPABLE);
         }
     }
 }

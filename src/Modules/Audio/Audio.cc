@@ -96,6 +96,9 @@ BOYD_API void BoydUpdate_Audio(void *state)
     auto *audioState = GetState(state);
     entt::registry &registry = Boyd_GameState()->ecs;
 
+    alcMakeContextCurrent(audioState->context);
+    BOYD_OPENALC_ERROR(audioState->device);
+
     auto entt_clipAndSourceView = registry.view<boyd::comp::AudioClip, boyd::comp::AudioSource>();
     auto entt_transform = registry.view<boyd::comp::AudioSource, boyd::comp::AudioInternals, boyd::comp::Transform>();
 
@@ -115,6 +118,17 @@ BOYD_API void BoydUpdate_Audio(void *state)
             boyd::comp::AudioSource &source = std::get<1>(tuple);
             boyd::comp::AudioInternals &internals = registry.get_or_assign<boyd::comp::AudioInternals>(entity, clip);
 
+            alGenBuffers(1, &internals.dataBuffer);
+            BOYD_OPENAL_ERROR();
+            alBufferData(internals.dataBuffer, internals.format,
+                         clip.wave.data.get(), clip.wave.sampleCount * clip.wave.channels * clip.wave.sampleSize / 8,
+                         clip.wave.sampleRate);
+            BOYD_OPENAL_ERROR();
+            alGenSources(1, &internals.source);
+            BOYD_OPENAL_ERROR();
+            alSourcei(internals.source, AL_BUFFER, internals.dataBuffer);
+            BOYD_OPENAL_ERROR();
+
             switch(source.soundType)
             {
             case boyd::comp::AudioSource::SoundType::SFX_LOOPABLE:
@@ -124,6 +138,7 @@ BOYD_API void BoydUpdate_Audio(void *state)
             case boyd::comp::AudioSource::SoundType::SFX:
                 alSourcei(internals.source, AL_LOOPING, AL_FALSE);
             }
+            BOYD_OPENAL_ERROR();
             alSourcePlay(internals.source);
             BOYD_OPENAL_ERROR();
         }
