@@ -1,6 +1,6 @@
 #pragma once
 
-#include <GL/gl.h>
+#include "Glfw.hh"
 #include <unordered_map>
 
 namespace boyd

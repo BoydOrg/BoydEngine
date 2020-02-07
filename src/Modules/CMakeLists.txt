@@ -81,11 +81,11 @@ boyd_module(NAME Audio PRIORITY 20
 
 boyd_module(NAME Gfx PRIORITY 99
     SOURCES Gfx/Gfx.cc Gfx/GL3.cc
-    LINKS glfw
+    LINKS glfw flextGL BoydOpenGL
 )
 
 # ------------------------------------------------------------------------------
-
+#include "Glfw.hh"
 set(BOYD_MODULES_MACRO "")
 foreach(BOYD_MODULE ${BOYD_MODULES})
     set(BOYD_MODULES_MACRO "${BOYD_MODULES_MACRO} \\\n ${BOYD_MODULE}")

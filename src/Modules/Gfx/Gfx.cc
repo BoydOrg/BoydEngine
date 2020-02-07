@@ -8,6 +8,7 @@
 #include "../../Components/Transform.hh"
 #include "GL3.hh"
 #include "GfxComponents.hh"
+#include "Glfw.hh"
 
 #include <entt/entt.hpp>
 #include <unordered_map>
@@ -39,7 +40,7 @@ struct BoydGfxState
 
         glfwWindowHint(GLFW_RESIZABLE, true);
         // Request OpenGL ES 3
-        glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_OPENGL_ES_API);
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
@@ -54,6 +55,10 @@ struct BoydGfxState
         glfwMakeContextCurrent(window);
 
         BOYD_LOG(Debug, "OpenGL: {} ({})", glGetString(GL_VERSION), glGetString(GL_VENDOR));
+        if(!flextInit(window))
+        {
+            BOYD_LOG(Error, "flextGL failed!");
+        }
     }
 
     ~BoydGfxState()

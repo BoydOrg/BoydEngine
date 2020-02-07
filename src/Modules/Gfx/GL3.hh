@@ -2,7 +2,6 @@
 
 #include "../../Components/Mesh.hh"
 #include "GfxComponents.hh"
-#include "Glfw.hh"
 
 namespace boyd
 {

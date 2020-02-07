@@ -1,6 +1,7 @@
 #include "GL3.hh"
 
 #include "../../Debug/Log.hh"
+#include "Glfw.hh"
 
 #define BOYD_CHECK(cond, ...)                           \
     if(!(cond))                                         \
