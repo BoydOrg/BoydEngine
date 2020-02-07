@@ -9,7 +9,8 @@ namespace boyd
 namespace comp
 {
 
-/// A 3D transform relative to world-space
+/// A renderable skybox.
+/// Must be attached to the same entity with the `Camera` & `MainCamera` to work!
 struct BOYD_API Skybox
 {
     ::Model rlSkyboxModel;

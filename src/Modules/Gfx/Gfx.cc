@@ -8,12 +8,15 @@
 #include "../../Components/Transform.hh"
 
 #include <entt/entt.hpp>
+#include <raylib.h>
+#include <rlgl.h>
+
+using namespace boyd;
 
 /// TODO: add state transfer
 struct BoydGfxState
 {
     bool isCursorLocked;
-    bool renderSkybox;
 };
 
 inline BoydGfxState *GetState(void *state)
@@ -33,13 +36,19 @@ void SetCursor(BoydGfxState *state)
     else
         EnableCursor();
 }
+
+inline static ::Matrix Glm2RLMat4(const glm::mat4 &mat)
+{
+    return *reinterpret_cast<const ::Matrix *>(&mat);
+}
+
 extern "C" {
+
 BOYD_API void *BoydInit_Gfx()
 {
     BOYD_LOG(Info, "Starting Gfx module");
     auto *gfxState = new BoydGfxState;
 
-    gfxState->renderSkybox = true;
 #ifdef DEBUG
     gfxState->isCursorLocked = false;
 #else
@@ -50,62 +59,79 @@ BOYD_API void *BoydInit_Gfx()
 
 BOYD_API void BoydUpdate_Gfx(void *state)
 {
-    boyd::GameState *entt_state = Boyd_GameState();
+    GameState *gameState = Boyd_GameState();
     auto *gfxState = GetState(state);
-    Camera *mainCamera;
 
-    entt_state->ecs.view<boyd::comp::Camera>().each([&mainCamera](auto entity, auto &camera) {
-        mainCamera = &camera.camera;
-    });
+    glm::vec2 screenSize{GetScreenWidth(), GetScreenHeight()};
 
-#ifdef DEBUG
-    if(IsKeyPressed(KEY_U) || (!gfxState->isCursorLocked && IsMouseButtonDown(MOUSE_LEFT_BUTTON)))
+    // TODO: Need a way to actually pick what camera to use - find the camera tagged "MainCamera"?
+    auto cameraView = gameState->ecs.view<comp::Camera, comp::ActiveCamera>();
+    if(cameraView.empty())
     {
-        FlipCursorGrabbing(gfxState);
+        // Hard to render anything without a camera...
+        return;
+    }
+    auto cameraEntity = *cameraView.begin();
+    const auto &camera = gameState->ecs.get<comp::Camera>(cameraEntity);
+
+    glm::mat4 projMtx;
+    switch(camera.mode)
+    {
+    case comp::Camera::Persp:
+        projMtx = glm::perspectiveFov(camera.fov, screenSize.x, screenSize.y, camera.zNear, camera.zFar);
+        break;
+    default: // comp::Camera::Ortho
+        if(glm::isinf(camera.zNear) || glm::isinf(camera.zFar))
+        {
+            projMtx = glm::ortho(camera.left, camera.right, camera.bottom, camera.top);
+        }
+        else
+        {
+            projMtx = glm::ortho(camera.left, camera.right, camera.bottom, camera.top, camera.zNear, camera.zFar);
+        }
+        break;
     }
 
-    if(IsKeyPressed(KEY_H))
+    glm::mat4 viewMtx = glm::identity<glm::mat4>();
+    if(gameState->ecs.has<comp::Transform>(cameraEntity))
     {
-        BOYD_LOG(Debug, "Flipping renderSkybox");
-        gfxState->renderSkybox ^= true;
+        viewMtx = gameState->ecs.get<comp::Transform>(cameraEntity).matrix;
+        viewMtx = glm::inverse(viewMtx); // Inverse, because this is a camera view matrix!
     }
-    SetCursor(gfxState);
-#endif
 
-    ClearBackground(BLACK);
+    const comp::Skybox *skybox = nullptr;
+    if(gameState->ecs.has<comp::Skybox>(cameraEntity))
+    {
+        skybox = &gameState->ecs.get<comp::Skybox>(cameraEntity);
+    }
 
-    boyd::comp::Skybox *skybox = nullptr;
-
-    entt_state->ecs.view<boyd::comp::Skybox>().each([&skybox](auto entity, auto &skyboxComp) {
-        skybox = &skyboxComp;
-    });
-
-    // Use Raylib's automatic camera management for us
-    ::UpdateCamera(mainCamera);
+    // -------------------------------------------------------------------------
 
     ::BeginDrawing();
-    ::BeginMode3D(*mainCamera);
+    ::ClearBackground(BLACK);
 
-    auto rl2glmVec3 = [](const ::Vector3 vec) {
-        return glm::vec3{vec.x, vec.y, vec.z};
-    };
+    // --- Raylib+glm setup code - based on BeginMode3D() ----------------------
+    rlMatrixMode(RL_PROJECTION); // Save the current 2D projection matrix so that `::EndMode3D()` can restore it later
+    rlPushMatrix();
 
-    auto view = glm::lookAt(rl2glmVec3(mainCamera->position), rl2glmVec3(mainCamera->target), rl2glmVec3(mainCamera->up));
-    ::SetMatrixModelview(*reinterpret_cast<const ::Matrix *>(&view));
+    rlglDraw();
+    SetMatrixProjection(Glm2RLMat4(projMtx));
+    SetMatrixModelview(Glm2RLMat4(viewMtx));
+    rlEnableDepthTest();
+    // -------------------------------------------------------------------------
 
-    if(skybox && gfxState->renderSkybox)
+    if(skybox)
     {
         DrawModel(skybox->rlSkyboxModel, (Vector3){0, 0, 0}, 1.0f, WHITE);
     }
 
-    DrawPlane({0.0f, -4.0f, 0.0f}, {200.0f, 200.0f}, GREEN);
-    // DrawGrid(10, 1.0f);
-
-    entt_state->ecs.view<boyd::comp::Transform, boyd::comp::Mesh>()
-        .each([state](auto entity, auto &transform, boyd::comp::Mesh &mesh) {
+    gameState->ecs.view<comp::Transform, comp::Mesh>()
+        .each([state](auto entity, const auto &transform, auto &mesh) {
             memcpy(&mesh.model.transform, &transform.matrix, sizeof(::Matrix));
             DrawModel(mesh.model, (Vector3){0, 6.0f, 0}, 1.0f, WHITE);
         });
+
+    // -------------------------------------------------------------------------
 
     ::EndMode3D();
     ::EndDrawing();
