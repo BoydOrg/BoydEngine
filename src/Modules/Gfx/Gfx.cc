@@ -186,6 +186,11 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
     // Poll input at end of frame to minimize delay between the Gfx system running (that should be the last one in the sequence)
     // and the next frame
     glfwPollEvents();
+
+    if(glfwWindowShouldClose(gfxState->window))
+    {
+        gameState->running = false;
+    }
 }
 
 BOYD_API void BoydHalt_Gfx(void *state)

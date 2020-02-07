@@ -39,7 +39,7 @@ int main(void)
     SceneManager::LoadScene("res/scene/1.scene");
 
     // Main game loop
-    while(true) // FIXME: readd quitting...
+    while(Boyd_GameState()->running)
     {
         // NOTE: Gfx is treated as a normal system (it makes drawcalls inside of its update() method).
         UpdateModules();
