@@ -14,16 +14,15 @@ struct BOYD_API AudioInternals
 {
     ALuint dataBuffer;
     ALuint source;
+    ALenum format;
 
     explicit AudioInternals(const AudioClip &clip)
     {
-
-        auto &wave = *clip.wave;
+        auto &wave = clip.wave;
         int channels = wave.channels;
         int sampleRate = wave.sampleRate;
         int bitsPerSample = wave.sampleSize;
 
-        ALenum format;
         if(channels == 1 && bitsPerSample == 8)
             format = AL_FORMAT_MONO8;
         else if(channels == 1 && bitsPerSample == 16)
@@ -39,7 +38,7 @@ struct BOYD_API AudioInternals
         }
 
         alGenBuffers(1, &dataBuffer);
-        alBufferData(dataBuffer, format, wave.data, wave.sampleCount * channels * bitsPerSample / 8, sampleRate);
+        alBufferData(dataBuffer, format, wave.data.get(), wave.sampleCount * channels * bitsPerSample / 8, sampleRate);
         alGenSources(1, &source);
         alSourcei(source, AL_BUFFER, dataBuffer);
     }
