@@ -118,29 +118,34 @@ BOYD_API void BoydUpdate_Audio(void *state)
             boyd::comp::AudioSource &source = std::get<1>(tuple);
             boyd::comp::AudioInternals &internals = registry.get_or_assign<boyd::comp::AudioInternals>(entity, clip);
 
-            alGenBuffers(1, &internals.dataBuffer);
-            BOYD_OPENAL_ERROR();
-            alBufferData(internals.dataBuffer, internals.format,
-                         clip.wave.data.get(), clip.wave.sampleCount * clip.wave.channels * clip.wave.sampleSize / 8,
-                         clip.wave.sampleRate);
-            BOYD_OPENAL_ERROR();
-            alGenSources(1, &internals.source);
-            BOYD_OPENAL_ERROR();
-            alSourcei(internals.source, AL_BUFFER, internals.dataBuffer);
-            BOYD_OPENAL_ERROR();
-
-            switch(source.soundType)
+            if(!internals.isSet)
             {
-            case boyd::comp::AudioSource::SoundType::SFX_LOOPABLE:
-            case boyd::comp::AudioSource::SoundType::BGM:
-                alSourcei(internals.source, AL_LOOPING, AL_TRUE);
-                break;
-            case boyd::comp::AudioSource::SoundType::SFX:
-                alSourcei(internals.source, AL_LOOPING, AL_FALSE);
+                alGenBuffers(1, &internals.dataBuffer);
+                BOYD_OPENAL_ERROR();
+                alBufferData(internals.dataBuffer, internals.format,
+                             clip.wave.data.get(), clip.wave.sampleCount * clip.wave.channels * clip.wave.sampleSize / 8,
+                             clip.wave.sampleRate);
+                BOYD_OPENAL_ERROR();
+                alGenSources(1, &internals.source);
+                BOYD_OPENAL_ERROR();
+                alSourcei(internals.source, AL_BUFFER, internals.dataBuffer);
+                BOYD_OPENAL_ERROR();
+
+                switch(source.soundType)
+                {
+                case boyd::comp::AudioSource::SoundType::SFX_LOOPABLE:
+                case boyd::comp::AudioSource::SoundType::BGM:
+                    alSourcei(internals.source, AL_LOOPING, AL_TRUE);
+                    break;
+                case boyd::comp::AudioSource::SoundType::SFX:
+                    alSourcei(internals.source, AL_LOOPING, AL_FALSE);
+                }
+                BOYD_OPENAL_ERROR();
+                alSourcePlay(internals.source);
+                BOYD_OPENAL_ERROR();
+
+                internals.isSet = true;
             }
-            BOYD_OPENAL_ERROR();
-            alSourcePlay(internals.source);
-            BOYD_OPENAL_ERROR();
         }
 
         boyd::comp::Camera *camera = nullptr;

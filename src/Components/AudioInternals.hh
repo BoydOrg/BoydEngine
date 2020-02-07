@@ -15,6 +15,7 @@ struct BOYD_API AudioInternals
     ALuint dataBuffer;
     ALuint source;
     ALenum format;
+    bool isSet = false;
 
     explicit AudioInternals(const AudioClip &clip)
     {
@@ -36,11 +37,6 @@ struct BOYD_API AudioInternals
             BOYD_LOG(Warn, "OpenAL does not support this file. Got bps: {}; channels: {}", bitsPerSample, channels);
             return;
         }
-
-        alGenBuffers(1, &dataBuffer);
-        alBufferData(dataBuffer, format, wave.data.get(), wave.sampleCount * channels * bitsPerSample / 8, sampleRate);
-        alGenSources(1, &source);
-        alSourcei(source, AL_BUFFER, dataBuffer);
     }
 
     ~AudioInternals()
