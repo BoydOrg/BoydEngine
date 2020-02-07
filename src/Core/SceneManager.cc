@@ -2,13 +2,17 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
+#include "../Components/AudioClip.hh"
 #include "../Components/AudioSource.hh"
 #include "../Components/Camera.hh"
+#include "../Components/ComponentLoadRequest.hh"
 #include "../Components/Mesh.hh"
 #include "../Components/Skybox.hh"
 #include "../Components/Transform.hh"
 #include "GameState.hh"
+#include "MusicAssetLoader.hh"
 #include "SceneManager.hh"
+#include <utility>
 
 extern "C" boyd::SceneManagerState *Boyd_SceneManager()
 {

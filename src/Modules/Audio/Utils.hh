@@ -1,21 +1,17 @@
-#include "../../Components/AudioSource.hh"
-#include <filesystem>
+#include <AL/alc.h>
 
 namespace boyd
 {
-/// Load a RIFF wav file.
-/// `path` - the asset directory
-/// `audioSource` - the AudioSource component
-void LoadWav(const std::filesystem::path &path,
-             boyd::comp::AudioSource &audioSource);
-/// Load a FLAC file.
-/// `path` - the asset directory
-/// `audioSource` - the AudioSource component
-void LoadFlac(const std::filesystem::path &path,
-              boyd::comp::AudioSource &audioSource);
 
-/// Fetches the internal OpenALGet error
-void PrintOpenALError();
+/// -- Do not use this directly! Use the macro BOYD_OPENAL_ERROR instead. --
+void PrintOpenALError(const char *file, int line);
 
-void PrintOpenALCError(ALCdevice* device);
-}
+/// -- Do not use this directly! Use the macro BOYD_OPENALC_ERROR instead. --
+void PrintOpenALCError(ALCdevice *device, const char *file, int line);
+} // namespace boyd
+
+/// Log an OpenAL error, if any
+#define BOYD_OPENAL_ERROR() boyd::PrintOpenALError(__FILE__, __LINE__);
+
+/// Log an OpenALC error, if any
+#define BOYD_OPENALC_ERROR(device) boyd::PrintOpenALCError(device, __FILE__, __LINE__);
