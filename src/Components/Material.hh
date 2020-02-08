@@ -5,24 +5,17 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <variant>
+
+#include "Texture.hh"
 
 namespace boyd
 {
 namespace comp
 {
 
-/// A texture.
-/// Not really a component, but used inside `comp::Material`s...
-struct BOYD_API Texture
-{
-    // FIXME IMPLEMENT
-};
-
-/// A shared pointer to texture data.
-using SharedTexture = std::shared_ptr<Texture>;
-
 /// A `comp::Material`'s parameter; corresponds more or less to a shader uniform.
-using MaterialParameter = std::variant<float, glm::vec2, glm::vec3, glm::vec4, glm::mat3, glm::mat4, SharedTexture>;
+using MaterialParameter = std::variant<float, glm::vec2, glm::vec3, glm::vec4, glm::mat3, glm::mat4, comp::Texture>;
 
 /// A graphics material.
 /// Attach this to an entity with a Mesh and a Transform to make it renderable.
