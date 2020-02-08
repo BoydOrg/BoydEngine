@@ -1,46 +1,35 @@
-#include "../../Core/GameState.hh"
-#include "../../Core/Platform.hh"
-#include "../../Debug/Log.hh"
-
-#include "../../Components/Camera.hh"
-#include "../../Components/Mesh.hh"
-#include "../../Components/Skybox.hh"
-#include "../../Components/Transform.hh"
-#include "GL3.hh"
 #include "Gfx.hh"
-#include "Glfw.hh"
 
 #include <entt/entt.hpp>
 
+#include "../../Components/Camera.hh"
+#include "../../Components/Material.hh"
+#include "../../Components/Mesh.hh"
+#include "../../Components/Skybox.hh"
+#include "../../Components/Transform.hh"
+
+#include "../../Core/GameState.hh"
+#include "../../Core/Platform.hh"
+#include "../../Debug/Log.hh"
 using namespace boyd;
 
-inline BoydGfxState *GetState(void *state)
-{
-    return reinterpret_cast<boyd::BoydGfxState *>(state);
-}
+#include "GL3/GL3.hh"
+#include "Glfw.hh"
 
-extern "C" {
-
-BOYD_API void *BoydInit_Gfx()
+namespace boyd
 {
-    BOYD_LOG(Info, "Starting Gfx module");
-    auto *state = new BoydGfxState;
-    InitInput(state);
-    return state;
-}
 
-BOYD_API void BoydUpdate_Gfx(void *statePtr)
+void BoydGfxState::Update()
 {
-    GameState *gameState = Boyd_GameState();
-    auto *gfxState = GetState(statePtr);
-    if(!gfxState->window)
+    auto *gameState = Boyd_GameState();
+
+    if(!window)
     {
         // Can't to much without a window
         return;
     }
-
     int screenW, screenH;
-    glfwGetFramebufferSize(gfxState->window, &screenW, &screenH);
+    glfwGetFramebufferSize(window, &screenW, &screenH);
     glm::vec2 screenSize{screenW, screenH};
 
     // TODO: Need a way to actually pick what camera to use - find the camera tagged "MainCamera"?
@@ -80,27 +69,18 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
 
     glm::mat4 viewProjectionMtx = projMtx * viewMtx;
 
-    // TODO comp::Skybox *skybox = nullptr;
-    // TODO if(gameState->ecs.has<comp::Skybox>(cameraEntity))
-    // TODO {
-    // TODO     skybox = &gameState->ecs.get<comp::Skybox>(cameraEntity);
-    // TODO }
-
     // -------------------------------------------------------------------------
 
-    glfwMakeContextCurrent(gfxState->window);
+    auto &stage = pipeline->stages[gl3::Pipeline::Forward];
+
+    glfwMakeContextCurrent(window);
     glViewport(0, 0, screenW, screenH);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-    // TODO: ONLY RENDER MESHES WITH MESHRENDERERS COMPONENTS IN THEM!
-    // TODO: HANDLE MATERIAL COMPONENTS!
-
     glEnable(GL_DEPTH_TEST);
-    gfxState->stdMaterial.BeginPass();
-    gl3::StandardMaterial::UPerInstance uPerInstance;
+    stage.pass.Begin();
 
-    gameState->ecs.view<comp::Transform, comp::Mesh>()
-        .each([&](auto entity, const auto &transform, auto &mesh) {
+    gameState->ecs.view<comp::Transform, comp::Mesh, comp::Material>()
+        .each([&](auto entity, const auto &transform, const auto &mesh, const auto &material) {
             // Find if we have the OpenGL state for this mesh data;
             // if not, upload it to GPU.
             auto gpuMeshIt = gfxState->meshMap.find(mesh.data.get());
@@ -129,9 +109,9 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
             glDrawElements(GL_TRIANGLES, mesh.data->indices.size(), GL_UNSIGNED_INT, nullptr);
         });
 
-    gfxState->stdMaterial.EndPass();
-    glDisable(GL_DEPTH_TEST);
     glBindVertexArray(0);
+    stage.pass.End();
+    glDisable(GL_DEPTH_TEST);
 
     // -------------------------------------------------------------------------
 
@@ -145,6 +125,29 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
     {
         gameState->running = false;
     }
+}
+
+} // namespace boyd
+
+inline BoydGfxState *GetState(void *state)
+{
+    return reinterpret_cast<boyd::BoydGfxState *>(state);
+}
+
+extern "C" {
+
+BOYD_API void *BoydInit_Gfx()
+{
+    BOYD_LOG(Info, "Starting Gfx module");
+    auto *state = new BoydGfxState;
+    InitInput(state);
+    return state;
+}
+
+BOYD_API void BoydUpdate_Gfx(void *statePtr)
+{
+    auto *gfxState = GetState(statePtr);
+    gfxState->Update();
 }
 
 BOYD_API void BoydHalt_Gfx(void *state)

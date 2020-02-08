@@ -1,9 +1,11 @@
 #pragma once
 
 #include <entt/entt.hpp>
+#include <memory>
 #include <unordered_map>
 
-#include "GL3.hh"
+#include "GL3/GL3.hh"
+#include "GL3/GL3Pipeline.hh"
 #include "Glfw.hh"
 
 #include "../../Core/Utils.hh"
@@ -11,9 +13,6 @@
 
 namespace boyd
 {
-
-static constexpr const char *STANDARD_VS_PATH = "assets/Shaders/Standard.vs";
-static constexpr const char *STANDARD_FS_PATH = "assets/Shaders/Standard.fs";
 
 struct BoydGfxState
 {
@@ -23,14 +22,8 @@ struct BoydGfxState
     /// This is so implicit sharing for mesh data works seamlessly - if the mesh data is identical it should go on the GPU just once!
     std::unordered_map<comp::Mesh::Data *, gl3::Mesh> meshMap;
 
-    struct
-    {
-        GLuint handle;
-        GLuint nullTextureHandle;   ///< A handle to a 1x1px white (aka "null") texture.
-        GLint uModelViewProjection; ///< `u_ModelViewProjection`
-        GLint uTexture;             ///< `u_Texture`
-
-    } standardSP; ///< Standard shader program.
+    /// The whole rendering pipeline.
+    std::unique_ptr<gl3::Pipeline> pipeline;
 
     BoydGfxState()
     {
@@ -38,20 +31,14 @@ struct BoydGfxState
         {
             return;
         }
-        if(!InitStandardShader())
-        {
-            return;
-        }
+        pipeline = std::make_unique<gl3::Pipeline>();
     }
 
     ~BoydGfxState()
     {
         // Important: destroy all OpenGL data before terminating GLFW!
         meshMap.clear();
-        glDeleteProgram(standardSP.handle);
-        standardSP.handle = 0;
-        glDeleteTextures(1, &standardSP.nullTextureHandle);
-        standardSP.nullTextureHandle = 0;
+        pipeline.reset();
 
         // Deinit GLFW
         if(window)
@@ -69,6 +56,9 @@ struct BoydGfxState
         //                  and kill them only when the reference count is one (i.e., just the pointer in the map)
         //                  - need to store the `shared_ptr` directly as key?
     }
+
+    /// Does all necessary steps to poll events and render a frame.
+    void Update();
 
 private:
     /// Initialize GLFW and flextGL.
@@ -107,66 +97,6 @@ private:
             BOYD_LOG(Error, "flextGL failed!");
             return false;
         }
-
-        return true;
-    }
-
-    /// Load the standard shader program.
-    bool InitStandardShader()
-    {
-        BOYD_LOG(Debug, "Loading the standard shader program (VS={}, FS={})", STANDARD_VS_PATH, STANDARD_FS_PATH);
-
-        std::string shaderSource;
-
-        if(!Slurp(STANDARD_VS_PATH, shaderSource))
-        {
-            BOYD_LOG(Error, "Failed to load the standard VS", STANDARD_VS_PATH);
-            return false;
-        }
-        GLuint vs = gl3::CompileShader(GL_VERTEX_SHADER, shaderSource);
-        if(vs == 0)
-        {
-            BOYD_LOG(Error, "Failed to compile the standard VS");
-            return false;
-        }
-
-        if(!Slurp(STANDARD_FS_PATH, shaderSource))
-        {
-            BOYD_LOG(Error, "Failed to load the standard FS from {}!", STANDARD_FS_PATH);
-            return false;
-        }
-        GLuint fs = gl3::CompileShader(GL_FRAGMENT_SHADER, shaderSource);
-        if(fs == 0)
-        {
-            BOYD_LOG(Error, "Failed to compile the standard FS");
-            glDeleteShader(vs);
-            return false;
-        }
-
-        standardSP.handle = gl3::LinkProgram({vs, fs});
-        if(standardSP.handle == 0)
-        {
-            BOYD_LOG(Error, "Failed to link the standard shader program");
-            glDeleteShader(vs);
-            glDeleteShader(fs);
-            return false;
-        }
-
-        standardSP.uModelViewProjection = glGetUniformLocation(standardSP.handle, "u_ModelViewProjection");
-        standardSP.uTexture = glGetUniformLocation(standardSP.handle, "u_Texture");
-
-        // Generate the "null" texture
-        glGenTextures(1, &standardSP.nullTextureHandle);
-        glBindTexture(GL_TEXTURE_2D, standardSP.nullTextureHandle);
-
-        static constexpr const uint8_t WHITE[3] = {255, 255, 255};
-        glTexImage2D(GL_TEXTURE_2D, 0,
-                     GL_RGB8, 1, 1, 0, GL_RGB,
-                     GL_UNSIGNED_BYTE, WHITE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-        glBindTexture(GL_TEXTURE_2D, 0);
 
         return true;
     }

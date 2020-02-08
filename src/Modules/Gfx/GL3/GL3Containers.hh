@@ -1,10 +1,11 @@
 #pragma once
 
 #include "../../Debug/Log.hh"
-#include "Glfw.hh"
 #include <memory>
 #include <utility>
 #include <vector>
+
+#include "../Glfw.hh"
 
 namespace boyd
 {
@@ -56,6 +57,12 @@ public:
         }
     }
 
+    /// Takes ownership of the given buffer.
+    explicit SharedBuffer(GLuint handle)
+        : SharedHandle(handle, Deleter)
+    {
+    }
+
     /// Creates a new buffer with the given data.
     SharedBuffer(GLenum target, GLsizeiptr size, const void *data, GLenum usage = GL_STATIC_DRAW)
         : SharedBuffer()
@@ -83,8 +90,6 @@ private:
 class SharedVertexArray : public SharedHandle
 {
 public:
-    using SharedHandle::SharedHandle;
-
     /// Creates a new vertex array.
     explicit SharedVertexArray()
         : SharedHandle(0, Deleter)
@@ -94,6 +99,12 @@ public:
         {
             BOYD_LOG(Warn, "Failed to create VAO");
         }
+    }
+
+    /// Takes ownership of the given vertex array.
+    explicit SharedVertexArray(GLuint handle)
+        : SharedHandle(handle, Deleter)
+    {
     }
 
 private:

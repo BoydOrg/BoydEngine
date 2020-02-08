@@ -87,7 +87,7 @@ boyd_module(NAME Audio PRIORITY 20
 )
 
 boyd_module(NAME Gfx PRIORITY 99
-    SOURCES Gfx/Gfx.cc Gfx/GL3.cc Gfx/Input.cc
+    SOURCES Gfx/Gfx.cc Gfx/Input.cc Gfx/GL3/GL3.cc Gfx/GL3/GL3Pipeline.cc
     LINKS glfw flextGL BoydOpenGL
 )
 
