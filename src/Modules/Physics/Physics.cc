@@ -113,5 +113,7 @@ BOYD_API void BoydHalt_Physics(void *state)
 
     // Destroy them!
     registry.destroy(boxColliderInternals.begin(), boxColliderInternals.end());
+
+    delete physicsState;
 }
 }
