@@ -1,10 +1,10 @@
 #include "AllLoaders.hh"
 
-#include "../../Components/AudioClip.hh"
 #include "../../Components/ComponentLoadRequest.hh"
 
 // TODO: Automate this header list from ALL_LOADERS?
 #include "AudioClip.hh"
+#include "Gltf.hh"
 #include "String.hh"
 
 namespace boyd

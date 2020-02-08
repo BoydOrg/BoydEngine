@@ -13,15 +13,22 @@ set_target_properties(BoydEngine PROPERTIES
     ENABLE_EXPORTS YES
 )
 
+# Need std::thread...
+find_package(Threads REQUIRED)
+
 add_subdirectory(3rdparty/)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     EnTT::EnTT
-    raylib
     fmt::fmt
     glm
     polyvox
+    ${CMAKE_THREAD_LIBS_INIT}
 )
+if(UNIX AND NOT APPLE)
+    # Required by Dll.hh
+    target_link_libraries(${PROJECT_NAME} PUBLIC -ldl)
+endif()
 
 # Generate BoydBuildConfig.hh by compiling & running BoydBuildUtil
 add_executable(BoydBuildUtil BoydBuildUtil.cc)

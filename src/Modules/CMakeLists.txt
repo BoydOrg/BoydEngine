@@ -73,6 +73,7 @@ boyd_module(NAME Scripting PRIORITY 1
 boyd_module(NAME AssetLoader PRIORITY 2
     SOURCES AssetLoader/AssetLoader.cc
             AssetLoader/Loaders/AllLoaders.cc
+    LINKS tinygltf
 )
 
 boyd_module(NAME Physics PRIORITY 10
@@ -87,11 +88,12 @@ boyd_module(NAME Audio PRIORITY 20
 
 
 boyd_module(NAME Gfx PRIORITY 99
-    SOURCES Gfx/Gfx.cc
+    SOURCES Gfx/Gfx.cc Gfx/GL3.cc
+    LINKS glfw flextGL BoydOpenGL
 )
 
 # ------------------------------------------------------------------------------
-
+#include "Glfw.hh"
 set(BOYD_MODULES_MACRO "")
 foreach(BOYD_MODULE ${BOYD_MODULES})
     set(BOYD_MODULES_MACRO "${BOYD_MODULES_MACRO} \\\n ${BOYD_MODULE}")

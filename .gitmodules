@@ -1,9 +1,6 @@
 [submodule "src/3rdparty/entt"]
 	path = src/3rdparty/entt
 	url = https://github.com/skypjack/entt
-[submodule "src/3rdparty/raylib"]
-	path = src/3rdparty/raylib
-	url = https://github.com/raysan5/raylib
 [submodule "src/3rdparty/fmt"]
 	path = src/3rdparty/fmt
 	url = https://github.com/fmtlib/fmt
@@ -28,7 +25,12 @@
 [submodule "src/3rdparty/polyvox"]
 	path = src/3rdparty/polyvox
 	url = https://bitbucket.org/volumesoffun/polyvox.git
-
 [submodule "src/3rdparty/reactphysics3d"]
 	path = src/3rdparty/reactphysics3d
 	url = https://github.com/DanielChappuis/reactphysics3d
+[submodule "src/3rdparty/tinygltf"]
+	path = src/3rdparty/tinygltf
+	url = https://github.com/syoyo/tinygltf
+[submodule "src/3rdparty/glfw"]
+	path = src/3rdparty/glfw
+	url = https://github.com/glfw/glfw
