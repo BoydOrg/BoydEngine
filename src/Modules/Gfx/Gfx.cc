@@ -1,5 +1,6 @@
 #include "../../Core/GameState.hh"
 #include "../../Core/Platform.hh"
+#include "../../Core/Utils.hh"
 #include "../../Debug/Log.hh"
 
 #include "../../Components/Camera.hh"
@@ -15,6 +16,9 @@
 namespace boyd
 {
 
+static constexpr const char *STANDARD_VS_PATH = "assets/Shaders/Standard.vs";
+static constexpr const char *STANDARD_FS_PATH = "assets/Shaders/Standard.fs";
+
 struct BoydGfxState
 {
     GLFWwindow *window;
@@ -23,7 +27,53 @@ struct BoydGfxState
     /// This is so implicit sharing for mesh data works seamlessly - if the mesh data is identical it should go on the GPU just once!
     std::unordered_map<comp::Mesh::Data *, gl3::Mesh> meshMap;
 
+    struct
+    {
+        GLuint handle;
+        GLint uModelViewProjection; ///< `u_ModelViewProjection`
+        GLint uTexture;             ///< `u_Texture`
+
+    } standardSP; ///< Standard shader program.
+
     BoydGfxState()
+    {
+        if(!InitContext())
+        {
+            return;
+        }
+        if(!InitStandardShader())
+        {
+            return;
+        }
+    }
+
+    ~BoydGfxState()
+    {
+        // Important: destroy all OpenGL data before terminating GLFW!
+        meshMap.clear();
+        glDeleteProgram(standardSP.handle);
+        standardSP.handle = 0;
+
+        // Deinit GLFW
+        if(window)
+        {
+            glfwDestroyWindow(window);
+            window = nullptr;
+        }
+        glfwTerminate();
+    }
+
+    /// Remove all meshes from the GPU that have are unused.
+    void CollectGarbage()
+    {
+        // FIXME IMPLEMENT: To do this, need a wait to reference-count the meshes in `meshMap`
+        //                  and kill them only when the reference count is one (i.e., just the pointer in the map)
+        //                  - need to store the `shared_ptr` directly as key?
+    }
+
+private:
+    /// Initialize GLFW and flextGL.
+    bool InitContext()
     {
         BOYD_LOG(Debug, "Initializing GLFW");
         if(!glfwInit())
@@ -31,7 +81,7 @@ struct BoydGfxState
             const char *error;
             int errorCode = glfwGetError(&error);
             BOYD_LOG(Error, "Failed to init GLFW: [{}] {}", errorCode, error);
-            return;
+            return false;
         }
 
         BOYD_LOG(Debug, "Creating GLFW window");
@@ -48,7 +98,7 @@ struct BoydGfxState
             const char *error;
             int errorCode = glfwGetError(&error);
             BOYD_LOG(Error, "Failed to create GLFW window: [{}] {}", errorCode, error);
-            return;
+            return false;
         }
         glfwMakeContextCurrent(window);
 
@@ -56,28 +106,57 @@ struct BoydGfxState
         if(!flextInit(window))
         {
             BOYD_LOG(Error, "flextGL failed!");
+            return false;
         }
+
+        return true;
     }
 
-    ~BoydGfxState()
+    /// Load the standard shader program.
+    bool InitStandardShader()
     {
-        // Important: destroy all OpenGL data before terminating GLFW!
-        meshMap.clear();
+        BOYD_LOG(Debug, "Loading the standard shader program (VS={}, FS={})", STANDARD_VS_PATH, STANDARD_FS_PATH);
 
-        if(window)
+        std::string shaderSource;
+
+        if(!Slurp(STANDARD_VS_PATH, shaderSource))
         {
-            glfwDestroyWindow(window);
-            window = nullptr;
+            BOYD_LOG(Error, "Failed to load the standard VS", STANDARD_VS_PATH);
+            return false;
         }
-        glfwTerminate();
-    }
+        GLuint vs = gl3::CompileShader(GL_VERTEX_SHADER, shaderSource);
+        if(vs == 0)
+        {
+            BOYD_LOG(Error, "Failed to compile the standard VS");
+            return false;
+        }
 
-    /// Remove all meshes from the GPU that have are unused.
-    void CollectGarbage()
-    {
-        // FIXME IMPLEMENT: To do this, need a wait to reference-count the meshes in `meshMap`
-        //                  and kill them only when the reference count is one (i.e., just the pointer in the map)
-        //                  - need to store the `shared_ptr` directly as key?
+        if(!Slurp(STANDARD_FS_PATH, shaderSource))
+        {
+            BOYD_LOG(Error, "Failed to load the standard FS from {}!", STANDARD_FS_PATH);
+            return false;
+        }
+        GLuint fs = gl3::CompileShader(GL_FRAGMENT_SHADER, shaderSource);
+        if(fs == 0)
+        {
+            BOYD_LOG(Error, "Failed to compile the standard FS");
+            glDeleteShader(vs);
+            return false;
+        }
+
+        standardSP.handle = gl3::LinkProgram({vs, fs});
+        if(standardSP.handle == 0)
+        {
+            BOYD_LOG(Error, "Failed to link the standard shader program");
+            glDeleteShader(vs);
+            glDeleteShader(fs);
+            return false;
+        }
+
+        standardSP.uModelViewProjection = glGetUniformLocation(standardSP.handle, "u_ModelViewProjection");
+        standardSP.uTexture = glGetUniformLocation(standardSP.handle, "u_Texture");
+
+        return true;
     }
 };
 
@@ -147,6 +226,8 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
         viewMtx = glm::inverse(viewMtx); // Inverse, because this is a camera view matrix!
     }
 
+    glm::mat4 viewProjectionMtx = projMtx * viewMtx;
+
     // TODO comp::Skybox *skybox = nullptr;
     // TODO if(gameState->ecs.has<comp::Skybox>(cameraEntity))
     // TODO {
@@ -157,11 +238,13 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
 
     glfwMakeContextCurrent(gfxState->window);
 
-    // FIXME: BIND THE SHADER PROGRAM FOR MESHES!
-    // FIXME: ONLY RENDER MESHES WITH MESHRENDERERS COMPONENTS IN THEM!
+    // TODO: ONLY RENDER MESHES WITH MESHRENDERERS COMPONENTS IN THEM!
+    // TODO: HANDLE MATERIAL COMPONENTS!
+
+    glUseProgram(gfxState->standardSP.handle);
 
     gameState->ecs.view<comp::Transform, comp::Mesh>()
-        .each([gfxState](auto entity, const auto &transform, auto &mesh) {
+        .each([&](auto entity, const auto &transform, auto &mesh) {
             // Find if we have the OpenGL state for this mesh data;
             // if not, upload it to GPU.
             auto gpuMeshIt = gfxState->meshMap.find(mesh.data.get());
@@ -182,10 +265,14 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
                 gpuMesh = &(gfxState->meshMap[mesh.data.get()] = std::move(gpuMeshInstance));
             }
 
+            glm::mat4 mvpMtx = viewProjectionMtx * transform.matrix;
+            glUniformMatrix4fv(gfxState->standardSP.uModelViewProjection, 1, false, &mvpMtx[0][0]);
+
             glBindVertexArray(gpuMesh->vao);
             glDrawElements(GL_TRIANGLES, mesh.data->indices.size(), GL_UNSIGNED_INT, nullptr);
         });
 
+    glBindVertexArray(0);
     glUseProgram(0);
 
     // -------------------------------------------------------------------------

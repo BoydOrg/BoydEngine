@@ -29,7 +29,7 @@ void boyd::SceneManager::LoadScene(const std::filesystem::path &scene)
     // Just instantiate random stuff
     auto mainCam = registry.create();
     registry.assign<boyd::comp::Transform>(mainCam,
-                                           glm::lookAt(glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec3{10.0f, 10.0f, 10.0f}, glm::vec3{0.0f, 1.0f, 0.0f}));
+                                           glm::lookAt(glm::vec3{-3.0f, -3.0f, -3.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec3{0.0f, 1.0f, 0.0f}));
     registry.assign<boyd::comp::Camera>(mainCam, boyd::comp::Camera::Perspective(90.0f));
     registry.assign<boyd::comp::ActiveCamera>(mainCam);
     //registry.assign<boyd::comp::Skybox>(mainCam, "assets/Textures/dresden_square.hdr");
