@@ -44,6 +44,18 @@ void GLFWKeyCallback(GLFWwindow *window, int key, int scancode, int action, int 
     case GLFW_KEY_D:
         input.axes[input.AXIS_EXPLORATION_HORIZ] = coeff;
         break;
+    case GLFW_KEY_UP:
+        input.axes[input.AXIS_EXPLORATION2_VERT] = coeff;
+        break;
+    case GLFW_KEY_DOWN:
+        input.axes[input.AXIS_EXPLORATION2_VERT] = -coeff;
+        break;
+    case GLFW_KEY_LEFT:
+        input.axes[input.AXIS_EXPLORATION2_HORIZ] = -coeff;
+        break;
+    case GLFW_KEY_RIGHT:
+        input.axes[input.AXIS_EXPLORATION2_HORIZ] = coeff;
+        break;
 
     // ... special modifiers
     case GLFW_KEY_LEFT_SHIFT:
@@ -67,7 +79,7 @@ void GLFWKeyCallback(GLFWwindow *window, int key, int scancode, int action, int 
         input.axes[input.AXIS_ALPHABETIC_TRIGGER + (key - GLFW_KEY_A)] = coeff;
     }
 
-    if(input.axes[input.AXIS_ALPHABETIC_TRIGGER + ('U' - 'A')])
+    if(key == GLFW_KEY_U && action == GLFW_PRESS)
     {
         BOYD_LOG(Info, "Ungrabbing...");
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);

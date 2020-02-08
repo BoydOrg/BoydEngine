@@ -17,7 +17,7 @@ struct BOYD_API InputState
     /// 2: Exploration horiz, mapped from A (-1) and D(+1)
     /// 3: Exploration vert, mapped from W (-1) and D (+1)
     /// 4: Exploration2 horiz, mapped from LEFT (-1) and RIGHT (+1)
-    /// 5: Exploration2 horiz, mapped from LEFT (-1) and RIGHT (+1)
+    /// 5: Exploration2 vert, mapped from DOWN (-1) and UP (+1)
     /// 6: Jump Trigger, mapped from Space (0: unpressed, 1: pressed)
     /// 7: Sprint Trigger, mapped from Shift (0: unpressed, 1: pressed)
     /// 8-17: If available, all the other alphabetic keys (0: unpressed, 1: pressed), else just a bunch of zeros
