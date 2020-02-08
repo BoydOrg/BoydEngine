@@ -7,7 +7,6 @@
 #include "../../Components/Skybox.hh"
 #include "../../Components/Transform.hh"
 #include "GL3.hh"
-#include "GfxComponents.hh"
 #include "Glfw.hh"
 
 #include <entt/entt.hpp>
@@ -16,14 +15,13 @@
 namespace boyd
 {
 
-/// TODO: add state transfer
 struct BoydGfxState
 {
     GLFWwindow *window;
 
     /// Maps all mesh data to its respective OpenGL mesh info.
     /// This is so implicit sharing for mesh data works seamlessly - if the mesh data is identical it should go on the GPU just once!
-    std::unordered_map<comp::Mesh::Data *, GLMesh> meshMap;
+    std::unordered_map<comp::Mesh::Data *, gl3::Mesh> meshMap;
 
     BoydGfxState()
     {
@@ -63,12 +61,23 @@ struct BoydGfxState
 
     ~BoydGfxState()
     {
+        // Important: destroy all OpenGL data before terminating GLFW!
+        meshMap.clear();
+
         if(window)
         {
             glfwDestroyWindow(window);
             window = nullptr;
         }
         glfwTerminate();
+    }
+
+    /// Remove all meshes from the GPU that have are unused.
+    void CollectGarbage()
+    {
+        // FIXME IMPLEMENT: To do this, need a wait to reference-count the meshes in `meshMap`
+        //                  and kill them only when the reference count is one (i.e., just the pointer in the map)
+        //                  - need to store the `shared_ptr` directly as key?
     }
 };
 
@@ -156,14 +165,14 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
             // Find if we have the OpenGL state for this mesh data;
             // if not, upload it to GPU.
             auto gpuMeshIt = gfxState->meshMap.find(mesh.data.get());
-            GLMesh *gpuMesh;
+            gl3::Mesh *gpuMesh;
             if(gpuMeshIt != gfxState->meshMap.end())
             {
                 gpuMesh = &gpuMeshIt->second;
             }
             else
             {
-                GLMesh gpuMeshInstance;
+                gl3::Mesh gpuMeshInstance;
                 bool uploadOk = gl3::UploadMesh(mesh, gpuMeshInstance);
                 if(!uploadOk)
                 {

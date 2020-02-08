@@ -25,7 +25,7 @@ namespace boyd
 namespace gl3
 {
 
-bool UploadMesh(const comp::Mesh &mesh, GLMesh &gpuMesh)
+bool UploadMesh(const comp::Mesh &mesh, gl3::Mesh &gpuMesh)
 {
     if(gpuMesh.vao == 0)
     {
