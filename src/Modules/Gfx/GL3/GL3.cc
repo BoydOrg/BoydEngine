@@ -13,13 +13,6 @@
 #define BOYD_OFFSETOF(type, field) \
     reinterpret_cast<void *>(offsetof(type, field))
 
-/// Map Mesh::Usage to OpenGL usage flags.
-static constexpr const GLenum GL_USAGE_MAP[] = {
-    GL_STATIC_DRAW,  // Static
-    GL_DYNAMIC_DRAW, // Dynamic
-    GL_STREAM_DRAW,  // Streaming
-};
-
 namespace boyd
 {
 namespace gl3
@@ -40,7 +33,14 @@ GLuint UploadBuffer(GLenum target, const void *data, size_t dataSize, GLenum usa
     return buffer;
 }
 
-bool UploadMesh(const comp::Mesh &mesh, gl3::Mesh &gpuMesh)
+/// Map Mesh::Usage/Texture::Usage to OpenGL usage flags.
+static constexpr const GLenum GL_USAGE_MAP[] = {
+    GL_STATIC_DRAW,  // Static
+    GL_DYNAMIC_DRAW, // Dynamic
+    GL_STREAM_DRAW,  // Streaming
+};
+
+bool UploadMesh(const comp::Mesh &mesh, gl3::SharedMesh &gpuMesh)
 {
     gpuMesh.vao = SharedVertexArray();
     BOYD_CHECK(gpuMesh.vao != 0, "Failed to create VAO")
@@ -77,6 +77,48 @@ bool UploadMesh(const comp::Mesh &mesh, gl3::Mesh &gpuMesh)
                           sizeof(comp::Mesh::Vertex), BOYD_OFFSETOF(comp::Mesh::Vertex, texCoord));
 
     glBindVertexArray(0);
+    return true;
+}
+
+/// Map Texture::Format to OpenGL <internalFormat, format> pairs.
+struct ImageFormat
+{
+    GLenum internalFormat;
+    GLenum format;
+};
+static constexpr const ImageFormat GL_IMAGEFORMAT_MAP[] = {
+    {GL_RGB8, GL_RGB},   // RGB8
+    {GL_RGBA8, GL_RGBA}, // RGBA8
+};
+
+/// Map Texture::Filter to OpenGL filtering modes.
+static constexpr const GLenum GL_IMAGEFILTER_MAP[] = {
+    GL_NEAREST,              // Nearest
+    GL_LINEAR,               // Bilinear
+    GL_LINEAR_MIPMAP_LINEAR, // Trilinear
+    GL_LINEAR_MIPMAP_LINEAR, // Anisotropic
+};
+
+bool UploadTexture(const comp::Texture &texture, gl3::SharedTexture &gpuTexture)
+{
+    gpuTexture = gl3::SharedTexture{0};
+    glGenTextures(1, gpuTexture.handle.get());
+    BOYD_CHECK(gpuTexture != 0, "Failed to create texture")
+
+    const auto &imgFormat = GL_IMAGEFORMAT_MAP[texture.data->format];
+
+    glBindTexture(GL_TEXTURE_2D, gpuTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0,
+                 imgFormat.internalFormat,
+                 texture.data->width, texture.data->height, 0,
+                 imgFormat.format,
+                 GL_UNSIGNED_BYTE, // FIXME: What if it's different?
+                 texture.data->pixels.data());
+
+    glTexParameteri(gpuTexture, GL_TEXTURE_MIN_FILTER, GL_IMAGEFILTER_MAP[texture.data->minfilter]);
+    glTexParameteri(gpuTexture, GL_TEXTURE_MAG_FILTER, GL_IMAGEFILTER_MAP[texture.data->magFilter]);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
     return true;
 }
 

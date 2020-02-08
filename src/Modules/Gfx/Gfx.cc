@@ -19,6 +19,85 @@ using namespace boyd;
 namespace boyd
 {
 
+bool BoydGfxState::InitContext()
+{
+    BOYD_LOG(Debug, "Initializing GLFW");
+    if(!glfwInit())
+    {
+        const char *error;
+        int errorCode = glfwGetError(&error);
+        BOYD_LOG(Error, "Failed to init GLFW: [{}] {}", errorCode, error);
+        return false;
+    }
+
+    BOYD_LOG(Debug, "Creating GLFW window");
+
+    glfwWindowHint(GLFW_RESIZABLE, true);
+    // Request OpenGL ES 3
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+
+    window = glfwCreateWindow(800, 600, "BoydEngine", nullptr, nullptr);
+    if(!window)
+    {
+        const char *error;
+        int errorCode = glfwGetError(&error);
+        BOYD_LOG(Error, "Failed to create GLFW window: [{}] {}", errorCode, error);
+        return false;
+    }
+    glfwMakeContextCurrent(window);
+
+    BOYD_LOG(Debug, "OpenGL: {} ({})", glGetString(GL_VERSION), glGetString(GL_VENDOR));
+    if(!flextInit(window))
+    {
+        BOYD_LOG(Error, "flextGL failed!");
+        return false;
+    }
+
+    return true;
+}
+
+gl3::SharedTexture BoydGfxState::MapGpuTexture(comp::Texture *texture)
+{
+    auto gpuTextureIt = textureMap.find(texture->data.get());
+    if(gpuTextureIt != textureMap.end())
+    {
+        return gpuTextureIt->second;
+    }
+    else
+    {
+        gl3::SharedTexture gpuTextureInstance{0};
+        bool uploadOk = gl3::UploadTexture(*texture, gpuTextureInstance);
+        if(!uploadOk)
+        {
+            BOYD_LOG(Warn, "Failed to upload texture to GPU");
+            return gl3::SharedTexture{0};
+        }
+        return textureMap.emplace(texture->data.get(), std::move(gpuTextureInstance)).first->second;
+    }
+}
+
+gl3::SharedMesh BoydGfxState::MapGpuMesh(comp::Mesh *mesh)
+{
+    auto gpuMeshIt = meshMap.find(mesh->data.get());
+    if(gpuMeshIt != meshMap.end())
+    {
+        return gpuMeshIt->second;
+    }
+    else
+    {
+        gl3::SharedMesh gpuMeshInstance;
+        bool uploadOk = gl3::UploadMesh(*mesh, gpuMeshInstance);
+        if(!uploadOk)
+        {
+            BOYD_LOG(Warn, "Failed to upload mesh to GPU");
+            return {};
+        }
+        return (meshMap[mesh->data.get()] = std::move(gpuMeshInstance));
+    }
+}
+
 void BoydGfxState::Update()
 {
     auto *gameState = Boyd_GameState();
@@ -69,43 +148,26 @@ void BoydGfxState::Update()
 
     glm::mat4 viewProjectionMtx = projMtx * viewMtx;
 
-    // -------------------------------------------------------------------------
-
-    auto &stage = pipeline->stages[gl3::Pipeline::Forward];
-
     glfwMakeContextCurrent(window);
     glViewport(0, 0, screenW, screenH);
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Forward pass: render all meshes in the ECS with forward lighting
+    // -----------------------------------------------------------------------------------------------------------------
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
+    auto &stage = pipeline->stages[gl3::Pipeline::Forward];
+
     stage.pass.Begin();
 
     gameState->ecs.view<comp::Transform, comp::Mesh, comp::Material>()
-        .each([&](auto entity, const auto &transform, const auto &mesh, const auto &material) {
-            // Find if we have the OpenGL state for this mesh data;
-            // if not, upload it to GPU.
-            auto gpuMeshIt = gfxState->meshMap.find(mesh.data.get());
-            gl3::Mesh *gpuMesh;
-            if(gpuMeshIt != gfxState->meshMap.end())
-            {
-                gpuMesh = &gpuMeshIt->second;
-            }
-            else
-            {
-                gl3::Mesh gpuMeshInstance;
-                bool uploadOk = gl3::UploadMesh(mesh, gpuMeshInstance);
-                if(!uploadOk)
-                {
-                    BOYD_LOG(Warn, "Failed to upload mesh to GPU");
-                    return;
-                }
-                gpuMesh = &(gfxState->meshMap[mesh.data.get()] = std::move(gpuMeshInstance));
-            }
-
+        .each([&](auto entity, const auto &transform, auto &mesh, auto &material) {
             glm::mat4 mvpMtx = viewProjectionMtx * transform.matrix;
-            memcpy(&uPerInstance.modelViewProjection, &mvpMtx, sizeof(glm::mat4));
 
-            gfxState->stdMaterial.Instance(&uPerInstance);
-            glBindVertexArray(gpuMesh->vao);
+            const auto gpuMesh = MapGpuMesh(&mesh);
+            // TODO: const auto gpuTexture = GpuTexture(material.param.texture...);
+
+            glBindVertexArray(gpuMesh.vao);
             glDrawElements(GL_TRIANGLES, mesh.data->indices.size(), GL_UNSIGNED_INT, nullptr);
         });
 
@@ -115,13 +177,13 @@ void BoydGfxState::Update()
 
     // -------------------------------------------------------------------------
 
-    glfwSwapBuffers(gfxState->window);
+    glfwSwapBuffers(window);
 
     // Poll input at end of frame to minimize delay between the Gfx system running (that should be the last one in the sequence)
     // and the next frame
-    UpdateInput(gfxState);
+    UpdateInput(this);
 
-    if(glfwWindowShouldClose(gfxState->window))
+    if(glfwWindowShouldClose(window))
     {
         gameState->running = false;
     }

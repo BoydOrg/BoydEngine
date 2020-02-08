@@ -8,6 +8,8 @@
 #include "GL3/GL3Pipeline.hh"
 #include "Glfw.hh"
 
+#include "../../Components/Mesh.hh"
+#include "../../Components/Texture.hh"
 #include "../../Core/Utils.hh"
 #include "../../Debug/Log.hh"
 
@@ -18,13 +20,18 @@ struct BoydGfxState
 {
     GLFWwindow *window;
 
-    /// Maps all mesh data to its respective OpenGL mesh info.
-    /// This is so implicit sharing for mesh data works seamlessly - if the mesh data is identical it should go on the GPU just once!
-    std::unordered_map<comp::Mesh::Data *, gl3::Mesh> meshMap;
-
     /// The whole rendering pipeline.
     std::unique_ptr<gl3::Pipeline> pipeline;
 
+    /// Maps all mesh data to its respective OpenGL mesh info.
+    /// (This is so implicit sharing for mesh data works seamlessly: 1 comp::Mesh on RAM -> 1 OpenGL mesh on VRAM)
+    std::unordered_map<comp::Mesh::Data *, gl3::SharedMesh> meshMap;
+
+    /// Maps all textures to their respective OpenGL counterpart.
+    /// (This is so implicit sharing for texture data works seamlessly: 1 comp::Texture on RAM -> 1 OpenGL texture on VRAM)
+    std::unordered_map<comp::Texture::Data *, gl3::SharedTexture> textureMap;
+
+public:
     BoydGfxState()
     {
         if(!InitContext())
@@ -62,44 +69,15 @@ struct BoydGfxState
 
 private:
     /// Initialize GLFW and flextGL.
-    bool InitContext()
-    {
-        BOYD_LOG(Debug, "Initializing GLFW");
-        if(!glfwInit())
-        {
-            const char *error;
-            int errorCode = glfwGetError(&error);
-            BOYD_LOG(Error, "Failed to init GLFW: [{}] {}", errorCode, error);
-            return false;
-        }
+    bool InitContext();
 
-        BOYD_LOG(Debug, "Creating GLFW window");
+    /// Gets the GPU texture from `textureMap` that is mapped to the given texture in RAM.
+    /// If there isn't any uploads `texture` to VRAM, then adds the pair to `textureMap` and returns the freshly-uploaded GPU texture.
+    gl3::SharedTexture MapGpuTexture(comp::Texture *texture);
 
-        glfwWindowHint(GLFW_RESIZABLE, true);
-        // Request OpenGL ES 3
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-
-        window = glfwCreateWindow(800, 600, "BoydEngine", nullptr, nullptr);
-        if(!window)
-        {
-            const char *error;
-            int errorCode = glfwGetError(&error);
-            BOYD_LOG(Error, "Failed to create GLFW window: [{}] {}", errorCode, error);
-            return false;
-        }
-        glfwMakeContextCurrent(window);
-
-        BOYD_LOG(Debug, "OpenGL: {} ({})", glGetString(GL_VERSION), glGetString(GL_VENDOR));
-        if(!flextInit(window))
-        {
-            BOYD_LOG(Error, "flextGL failed!");
-            return false;
-        }
-
-        return true;
-    }
+    /// Gets the GPU mesh from `meshMap` that is mapped to the given mesh in RAM.
+    /// If there isn't any uploads `mesh` to VRAM, then adds the pair to `meshMap` and returns the freshly-uploaded GPU mesh.
+    gl3::SharedMesh MapGpuMesh(comp::Mesh *mesh);
 };
 
 /// Called at every gfx reload

@@ -161,29 +161,24 @@ private:
 };
 
 /// A RAII shared pointer over a mesh that is loaded on the GPU.
-struct Mesh
+struct SharedMesh
 {
     SharedVertexArray vao;
     SharedBuffer vbo;
     SharedBuffer ibo;
 
     /// Creates a new, uninitialized mesh.
-    Mesh()
+    SharedMesh()
         : vao{0}, vbo{0}, ibo{0}
     {
     }
     /// Creates a new mesh from the given VAO and buffers (that will be implicitly shared).
-    Mesh(SharedVertexArray vao, SharedBuffer vbo, SharedBuffer ibo)
+    SharedMesh(SharedVertexArray vao, SharedBuffer vbo, SharedBuffer ibo)
         : vao{vao}, vbo{vbo}, ibo{ibo}
     {
     }
 
-    Mesh(const Mesh &tocopy) = delete;
-    Mesh &operator=(const Mesh &tocopy) = delete;
-    Mesh(Mesh &&tomove) = default;
-    Mesh &operator=(Mesh &&tomove) = default;
-
-    ~Mesh() = default;
+    ~SharedMesh() = default;
 };
 
 } // namespace gl3
