@@ -1,5 +1,6 @@
 #include "GL3.hh"
 
+#include "../../Core/Utils.hh"
 #include "../../Debug/Log.hh"
 #include "Glfw.hh"
 
@@ -136,6 +137,82 @@ GLuint LinkProgram(const std::vector<GLuint> &shaders)
     }
 
     return program;
+}
+
+StandardMaterial::StandardMaterial()
+{
+    // Load, compile and link the standard shader program --------------------------------------------------------------
+    BOYD_LOG(Debug, "Loading the standard shader program (VS={}, FS={})", VS_PATH, FS_PATH);
+
+    std::string shaderSource;
+    if(!Slurp(VS_PATH, shaderSource))
+    {
+        BOYD_LOG(Error, "Failed to load the standard VS", VS_PATH);
+        return;
+    }
+    GLuint vs = gl3::CompileShader(GL_VERTEX_SHADER, shaderSource);
+    if(vs == 0)
+    {
+        BOYD_LOG(Error, "Failed to compile the standard VS");
+        return;
+    }
+
+    if(!Slurp(FS_PATH, shaderSource))
+    {
+        BOYD_LOG(Error, "Failed to load the standard FS from {}!", FS_PATH);
+        return;
+    }
+    GLuint fs = gl3::CompileShader(GL_FRAGMENT_SHADER, shaderSource);
+    if(fs == 0)
+    {
+        BOYD_LOG(Error, "Failed to compile the standard FS");
+        glDeleteShader(vs);
+        return;
+    }
+
+    GLuint program = gl3::LinkProgram({vs, fs});
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+    if(program == 0)
+    {
+        BOYD_LOG(Error, "Failed to link the standard shader program");
+        return;
+    }
+
+    // Generate the null texture ---------------------------------------------------------------------------------------
+    glGenTextures(1, &nullTexture);
+
+    glBindTexture(GL_TEXTURE_2D, nullTexture);
+    static constexpr const uint8_t WHITE[3] = {255, 255, 255};
+    glTexImage2D(GL_TEXTURE_2D, 0,
+                 GL_RGB8, 1, 1, 0, GL_RGB,
+                 GL_UNSIGNED_BYTE, WHITE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    if(nullTexture == 0)
+    {
+        BOYD_LOG(Error, "Failed to create a null texture for the standard material");
+        return;
+    }
+
+    // Generate per-pass/per-instance uniform buffers and assemble the material -----------------------------------------------------
+    static const UPerPass perPassData{0}; //< u_DiffuseMap to TEXTURE0
+    uPerPass = SharedBuffer(GL_UNIFORM_BUFFER, sizeof(perPassData), &perPassData, GL_STATIC_DRAW);
+
+    static const UPerInstance perInstanceData{}; //< (uninitialized)
+    uPerInstance = SharedBuffer(GL_UNIFORM_BUFFER, sizeof(perInstanceData), &perInstanceData, GL_STREAM_DRAW);
+
+    material = Material{program, 1};
+    material.textures.emplace_back(GL_TEXTURE_2D, nullTexture);
+}
+
+StandardMaterial::~StandardMaterial()
+{
+    glDeleteTextures(1, &nullTexture);
+    nullTexture = 0;
+    // Let the other RAII fields take care of the rest
 }
 
 } // namespace gl3

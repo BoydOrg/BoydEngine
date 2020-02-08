@@ -31,5 +31,62 @@ GLuint CompileShader(GLenum type, std::string source);
 /// Returns 0 on error.
 GLuint LinkProgram(const std::vector<GLuint> &shaders);
 
+/// A copy of the standard material (& all of its uniforms + textures).
+class StandardMaterial
+{
+public:
+    static constexpr const char *VS_PATH = "assets/Shaders/Standard.vs";
+    static constexpr const char *FS_PATH = "assets/Shaders/Standard.fs";
+
+    /// Per-pass uniform data
+    struct UPerPass
+    {
+        GLint diffuseMap; ///< sampler2D u_DiffuseMap;
+    };
+    /// Per-instance uniform data
+    struct UPerInstance
+    {
+        glm::mat4 modelViewProjection; ///< mat4 u_ModelViewProjection;
+    };
+
+private:
+    gl3::Material material;         ///< The inner material.
+    GLuint nullTexture;             ///< A white 1px*1px texture.
+    gl3::SharedBuffer uPerPass;     ///< `UPerPass` in a buffer.
+    gl3::SharedBuffer uPerInstance; ///< `UPerInstance` in a buffer.
+
+public:
+    /// Loads a copy of the standard material.
+    /// Loads & links its shaders and generates a "null" (1px*1px white) texture.
+    explicit StandardMaterial();
+
+    StandardMaterial(const StandardMaterial &toCopy) = delete;
+    StandardMaterial &operator=(const StandardMaterial &toCopy) = delete;
+    StandardMaterial(StandardMaterial &&toMove) = default;
+    StandardMaterial &operator=(StandardMaterial &&toMove) = default;
+
+    ~StandardMaterial();
+
+    /// Begins a pass with the standard material (& its default per-pass uniforms).
+    inline void BeginPass()
+    {
+        material.BeginPass(uPerPass);
+    }
+
+    /// Sets per-instance uniforms to the given values.
+    inline void Instance(const UPerInstance *perInstanceData)
+    {
+        glBindBuffer(GL_UNIFORM_BUFFER, uPerInstance);
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(UPerInstance), perInstanceData, GL_STREAM_DRAW);
+        material.Instance(uPerInstance);
+    }
+
+    /// Ends a pass with the standard material.
+    inline void EndPass()
+    {
+        material.EndPass();
+    }
+};
+
 } // namespace gl3
 } // namespace boyd

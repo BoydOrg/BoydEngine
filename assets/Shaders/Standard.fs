@@ -3,7 +3,7 @@ precision mediump float;
 
 // BoydEngine - Standard fragment shader
 
-uniform sampler2D u_DiffuseMap;
+sampler2D u_DiffuseMap;
 
 in vec3 vo_Normal;
 in vec4 vo_TintEmission;

@@ -1,6 +1,5 @@
 #include "../../Core/GameState.hh"
 #include "../../Core/Platform.hh"
-#include "../../Core/Utils.hh"
 #include "../../Debug/Log.hh"
 
 #include "../../Components/Camera.hh"
@@ -16,9 +15,6 @@
 namespace boyd
 {
 
-static constexpr const char *STANDARD_VS_PATH = "assets/Shaders/Standard.vs";
-static constexpr const char *STANDARD_FS_PATH = "assets/Shaders/Standard.fs";
-
 struct BoydGfxState
 {
     GLFWwindow *window;
@@ -26,15 +22,8 @@ struct BoydGfxState
     /// Maps all mesh data to its respective OpenGL mesh info.
     /// This is so implicit sharing for mesh data works seamlessly - if the mesh data is identical it should go on the GPU just once!
     std::unordered_map<comp::Mesh::Data *, gl3::Mesh> meshMap;
-
-    struct
-    {
-        GLuint handle;
-        GLuint nullTextureHandle;   ///< A handle to a 1x1px white (aka "null") texture.
-        GLint uModelViewProjection; ///< `u_ModelViewProjection`
-        GLint uTexture;             ///< `u_Texture`
-
-    } standardSP; ///< Standard shader program.
+    /// Default material.
+    gl3::StandardMaterial stdMaterial;
 
     BoydGfxState()
     {
@@ -42,20 +31,14 @@ struct BoydGfxState
         {
             return;
         }
-        if(!InitStandardShader())
-        {
-            return;
-        }
+        stdMaterial = gl3::StandardMaterial();
     }
 
     ~BoydGfxState()
     {
         // Important: destroy all OpenGL data before terminating GLFW!
         meshMap.clear();
-        glDeleteProgram(standardSP.handle);
-        standardSP.handle = 0;
-        glDeleteTextures(1, &standardSP.nullTextureHandle);
-        standardSP.nullTextureHandle = 0;
+        stdMaterial.~StandardMaterial();
 
         // Deinit GLFW
         if(window)
@@ -111,66 +94,6 @@ private:
             BOYD_LOG(Error, "flextGL failed!");
             return false;
         }
-
-        return true;
-    }
-
-    /// Load the standard shader program.
-    bool InitStandardShader()
-    {
-        BOYD_LOG(Debug, "Loading the standard shader program (VS={}, FS={})", STANDARD_VS_PATH, STANDARD_FS_PATH);
-
-        std::string shaderSource;
-
-        if(!Slurp(STANDARD_VS_PATH, shaderSource))
-        {
-            BOYD_LOG(Error, "Failed to load the standard VS", STANDARD_VS_PATH);
-            return false;
-        }
-        GLuint vs = gl3::CompileShader(GL_VERTEX_SHADER, shaderSource);
-        if(vs == 0)
-        {
-            BOYD_LOG(Error, "Failed to compile the standard VS");
-            return false;
-        }
-
-        if(!Slurp(STANDARD_FS_PATH, shaderSource))
-        {
-            BOYD_LOG(Error, "Failed to load the standard FS from {}!", STANDARD_FS_PATH);
-            return false;
-        }
-        GLuint fs = gl3::CompileShader(GL_FRAGMENT_SHADER, shaderSource);
-        if(fs == 0)
-        {
-            BOYD_LOG(Error, "Failed to compile the standard FS");
-            glDeleteShader(vs);
-            return false;
-        }
-
-        standardSP.handle = gl3::LinkProgram({vs, fs});
-        if(standardSP.handle == 0)
-        {
-            BOYD_LOG(Error, "Failed to link the standard shader program");
-            glDeleteShader(vs);
-            glDeleteShader(fs);
-            return false;
-        }
-
-        standardSP.uModelViewProjection = glGetUniformLocation(standardSP.handle, "u_ModelViewProjection");
-        standardSP.uTexture = glGetUniformLocation(standardSP.handle, "u_Texture");
-
-        // Generate the "null" texture
-        glGenTextures(1, &standardSP.nullTextureHandle);
-        glBindTexture(GL_TEXTURE_2D, standardSP.nullTextureHandle);
-
-        static constexpr const uint8_t WHITE[3] = {255, 255, 255};
-        glTexImage2D(GL_TEXTURE_2D, 0,
-                     GL_RGB8, 1, 1, 0, GL_RGB,
-                     GL_UNSIGNED_BYTE, WHITE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-        glBindTexture(GL_TEXTURE_2D, 0);
 
         return true;
     }
@@ -259,8 +182,9 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
     // TODO: ONLY RENDER MESHES WITH MESHRENDERERS COMPONENTS IN THEM!
     // TODO: HANDLE MATERIAL COMPONENTS!
 
-    glUseProgram(gfxState->standardSP.handle);
     glEnable(GL_DEPTH_TEST);
+    gfxState->stdMaterial.BeginPass();
+    gl3::StandardMaterial::UPerInstance uPerInstance;
 
     gameState->ecs.view<comp::Transform, comp::Mesh>()
         .each([&](auto entity, const auto &transform, auto &mesh) {
@@ -285,21 +209,16 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
             }
 
             glm::mat4 mvpMtx = viewProjectionMtx * transform.matrix;
-            glUniformMatrix4fv(gfxState->standardSP.uModelViewProjection, 1, false, &mvpMtx[0][0]);
+            memcpy(&uPerInstance.modelViewProjection, &mvpMtx, sizeof(glm::mat4));
 
-            // TODO: Handle the real texture
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, gfxState->standardSP.nullTextureHandle);
-            glUniform1i(gfxState->standardSP.uTexture, 0); // (TEXTURE0)
-
+            gfxState->stdMaterial.Instance(&uPerInstance);
             glBindVertexArray(gpuMesh->vao);
             glDrawElements(GL_TRIANGLES, mesh.data->indices.size(), GL_UNSIGNED_INT, nullptr);
         });
 
+    gfxState->stdMaterial.EndPass();
     glDisable(GL_DEPTH_TEST);
     glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glUseProgram(0);
 
     // -------------------------------------------------------------------------
 

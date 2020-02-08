@@ -185,6 +185,12 @@ struct Material
     /// Contains <texture target, texture handle> pairs for the textures to bind, TEXTURE0..TEXTUREn.
     std::vector<std::pair<GLenum, GLuint>> textures;
 
+    /// Creates a new, uninitialized material.
+    Material()
+        : program{0}, textures{}
+    {
+    }
+
     /// Initializes a material given its already-loaded `program`, how many textures it will use,
     /// and a (optional) handle to the per-pass uniform buffer.
     Material(GLuint program, unsigned nTextures = 0)

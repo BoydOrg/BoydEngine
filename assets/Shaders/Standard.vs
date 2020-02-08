@@ -3,7 +3,10 @@ precision mediump float;
 
 // BoydEngine - Standard vertex shader
 
-uniform mat4 u_ModelViewProjection;
+layout(std140) uniform PerInstance
+{
+    mat4 u_ModelViewProjection;
+};
 
 layout(location = 0) in vec3 vi_Position;
 layout(location = 1) in vec3 vi_Normal;
