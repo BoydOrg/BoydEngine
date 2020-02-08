@@ -31,6 +31,7 @@
         "__functional_03": "cpp",
         "functional": "cpp",
         "future": "cpp",
-        "memory": "cpp"
+        "memory": "cpp",
+        "variant": "cpp"
     }
 }

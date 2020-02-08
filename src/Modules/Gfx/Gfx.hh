@@ -8,6 +8,7 @@
 #include "GL3/GL3Pipeline.hh"
 #include "Glfw.hh"
 
+#include "../../Components/Material.hh"
 #include "../../Components/Mesh.hh"
 #include "../../Components/Texture.hh"
 #include "../../Core/Utils.hh"
@@ -73,11 +74,18 @@ private:
 
     /// Gets the GPU texture from `textureMap` that is mapped to the given texture in RAM.
     /// If there isn't any uploads `texture` to VRAM, then adds the pair to `textureMap` and returns the freshly-uploaded GPU texture.
-    gl3::SharedTexture MapGpuTexture(comp::Texture *texture);
+    gl3::SharedTexture MapGpuTexture(const comp::Texture *texture);
 
     /// Gets the GPU mesh from `meshMap` that is mapped to the given mesh in RAM.
     /// If there isn't any uploads `mesh` to VRAM, then adds the pair to `meshMap` and returns the freshly-uploaded GPU mesh.
-    gl3::SharedMesh MapGpuMesh(comp::Mesh *mesh);
+    gl3::SharedMesh MapGpuMesh(const comp::Mesh *mesh);
+
+    /// Applies all of a material's parameters to `pass`.
+    /// Loads and bits textures (via `MapGpuTexture()`) as necessary.
+    /// Returns the number of textures bound.
+    ///
+    /// WARNING: Assumes tha `pass.program` is bound!
+    unsigned ApplyMaterialParams(const comp::Material &material, gl3::RenderPass &pass);
 };
 
 /// Called at every gfx reload

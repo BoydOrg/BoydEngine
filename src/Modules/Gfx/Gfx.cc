@@ -58,7 +58,7 @@ bool BoydGfxState::InitContext()
     return true;
 }
 
-gl3::SharedTexture BoydGfxState::MapGpuTexture(comp::Texture *texture)
+gl3::SharedTexture BoydGfxState::MapGpuTexture(const comp::Texture *texture)
 {
     auto gpuTextureIt = textureMap.find(texture->data.get());
     if(gpuTextureIt != textureMap.end())
@@ -78,7 +78,7 @@ gl3::SharedTexture BoydGfxState::MapGpuTexture(comp::Texture *texture)
     }
 }
 
-gl3::SharedMesh BoydGfxState::MapGpuMesh(comp::Mesh *mesh)
+gl3::SharedMesh BoydGfxState::MapGpuMesh(const comp::Mesh *mesh)
 {
     auto gpuMeshIt = meshMap.find(mesh->data.get());
     if(gpuMeshIt != meshMap.end())
@@ -96,6 +96,58 @@ gl3::SharedMesh BoydGfxState::MapGpuMesh(comp::Mesh *mesh)
         }
         return (meshMap[mesh->data.get()] = std::move(gpuMeshInstance));
     }
+}
+
+unsigned BoydGfxState::ApplyMaterialParams(const comp::Material &material, gl3::RenderPass &pass)
+{
+    std::string uniformName;
+    unsigned nTexturesApplied = 0;
+
+    for(const auto &param : material.parameters)
+    {
+        uniformName = fmt::format(FMT_STRING("u_{}"), param.first);
+        auto uniformLocIt = pass.uniforms.find(uniformName);
+        if(uniformLocIt == pass.uniforms.end())
+        {
+            continue;
+        }
+        GLint uniformLoc = uniformLocIt->second;
+
+        switch(param.second.index())
+        {
+        case 0: // float
+            glUniform1f(uniformLoc, std::get<float>(param.second));
+            break;
+        case 1: // glm::vec2
+            glUniform2fv(uniformLoc, 1, &std::get<glm::vec2>(param.second)[0]);
+            break;
+        case 2: // glm::vec3
+            glUniform3fv(uniformLoc, 1, &std::get<glm::vec3>(param.second)[0]);
+            break;
+        case 3: // glm::vec4
+            glUniform4fv(uniformLoc, 1, &std::get<glm::vec4>(param.second)[0]);
+            break;
+        case 4: // glm::mat3
+            glUniformMatrix3fv(uniformLoc, 1, false, &std::get<glm::mat3>(param.second)[0][0]);
+            break;
+        case 5: // glm::mat4
+            glUniformMatrix4fv(uniformLoc, 1, false, &std::get<glm::mat4>(param.second)[0][0]);
+            break;
+        case 6: // comp::Texture
+        {
+            auto gpuTexture = MapGpuTexture(&std::get<comp::Texture>(param.second));
+            glActiveTexture(GL_TEXTURE0 + nTexturesApplied);
+            glBindTexture(GL_TEXTURE_2D, gpuTexture); // TODO: support non-2D textures?
+            nTexturesApplied++;
+        }
+        break;
+        default:
+            // *X-Files main theme*
+            break;
+        }
+    }
+
+    return nTexturesApplied;
 }
 
 void BoydGfxState::Update()
@@ -160,13 +212,27 @@ void BoydGfxState::Update()
 
     stage.pass.Begin();
 
+    unsigned nTextures = 0; // Number of textures bound the previous drawcall
     gameState->ecs.view<comp::Transform, comp::Mesh, comp::Material>()
-        .each([&](auto entity, const auto &transform, auto &mesh, auto &material) {
-            glm::mat4 mvpMtx = viewProjectionMtx * transform.matrix;
-
+        .each([&](auto entity, const comp::Transform &transform, comp::Mesh &mesh, comp::Material &material) {
             const auto gpuMesh = MapGpuMesh(&mesh);
-            // TODO: const auto gpuTexture = GpuTexture(material.param.texture...);
 
+            // Apply uniforms + bind the textures needed for this drawcall
+            // (uploads textures to VRAM if they weren't already there)
+            unsigned nTexturesNow = ApplyMaterialParams(material, stage.pass);
+
+            glm::mat4 mvpMtx = viewProjectionMtx * transform.matrix;
+            glUniformMatrix4fv(stage.pass.uniforms["u_ModelViewProjection"], 1, false, &mvpMtx[0][0]);
+
+            // Unbind all textures that would be unused this drawcall
+            for(unsigned i = nTextures; i > nTexturesNow; i--)
+            {
+                glActiveTexture(GL_TEXTURE0 + i - 1);
+                glBindTexture(GL_TEXTURE_2D, 0);
+            }
+            nTextures = nTexturesNow;
+
+            // Bind VBO+IBO and render
             glBindVertexArray(gpuMesh.vao);
             glDrawElements(GL_TRIANGLES, mesh.data->indices.size(), GL_UNSIGNED_INT, nullptr);
         });

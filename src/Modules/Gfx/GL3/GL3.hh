@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -41,6 +42,8 @@ struct RenderPass
 {
     /// The shader program to use for this pass.
     GLuint program;
+    /// Cache of <uniform name, uniform location>, for convenience (& performance).
+    std::unordered_map<std::string, GLint> uniforms;
     /// <texture target, texture> pairs for this pass, TEXTURE0..TEXTUREn.
     std::vector<std::pair<GLenum, SharedTexture>> textures;
 
@@ -54,6 +57,18 @@ struct RenderPass
     RenderPass(GLuint program, const decltype(textures) textures)
         : program{program}, textures{textures}
     {
+        GLint nUniforms;
+        glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &nUniforms);
+
+        GLchar uniformName[64];
+        GLsizei uniformNameLen;
+        GLint uSize;
+        GLenum uType;
+        for(GLint i = 0; i < nUniforms; i++)
+        {
+            glGetActiveUniform(program, GLuint(i), sizeof(uniformName), &uniformNameLen, &uSize, &uType, uniformName);
+            uniforms[std::string{uniformName, size_t(uniformNameLen)}] = i;
+        }
     }
 
     RenderPass(const RenderPass &toCopy) = delete;
