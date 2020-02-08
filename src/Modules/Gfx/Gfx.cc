@@ -7,99 +7,10 @@
 #include "../../Components/Skybox.hh"
 #include "../../Components/Transform.hh"
 #include "GL3.hh"
+#include "Gfx.hh"
 #include "Glfw.hh"
 
 #include <entt/entt.hpp>
-#include <unordered_map>
-
-namespace boyd
-{
-
-struct BoydGfxState
-{
-    GLFWwindow *window;
-
-    /// Maps all mesh data to its respective OpenGL mesh info.
-    /// This is so implicit sharing for mesh data works seamlessly - if the mesh data is identical it should go on the GPU just once!
-    std::unordered_map<comp::Mesh::Data *, gl3::Mesh> meshMap;
-    /// Default material.
-    gl3::StandardMaterial stdMaterial;
-
-    BoydGfxState()
-    {
-        if(!InitContext())
-        {
-            return;
-        }
-        stdMaterial = gl3::StandardMaterial();
-    }
-
-    ~BoydGfxState()
-    {
-        // Important: destroy all OpenGL data before terminating GLFW!
-        meshMap.clear();
-        stdMaterial.~StandardMaterial();
-
-        // Deinit GLFW
-        if(window)
-        {
-            glfwDestroyWindow(window);
-            window = nullptr;
-        }
-        glfwTerminate();
-    }
-
-    /// Remove all meshes from the GPU that have are unused.
-    void CollectGarbage()
-    {
-        // FIXME IMPLEMENT: To do this, need a wait to reference-count the meshes in `meshMap`
-        //                  and kill them only when the reference count is one (i.e., just the pointer in the map)
-        //                  - need to store the `shared_ptr` directly as key?
-    }
-
-private:
-    /// Initialize GLFW and flextGL.
-    bool InitContext()
-    {
-        BOYD_LOG(Debug, "Initializing GLFW");
-        if(!glfwInit())
-        {
-            const char *error;
-            int errorCode = glfwGetError(&error);
-            BOYD_LOG(Error, "Failed to init GLFW: [{}] {}", errorCode, error);
-            return false;
-        }
-
-        BOYD_LOG(Debug, "Creating GLFW window");
-
-        glfwWindowHint(GLFW_RESIZABLE, true);
-        // Request OpenGL ES 3
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-
-        window = glfwCreateWindow(800, 600, "BoydEngine", nullptr, nullptr);
-        if(!window)
-        {
-            const char *error;
-            int errorCode = glfwGetError(&error);
-            BOYD_LOG(Error, "Failed to create GLFW window: [{}] {}", errorCode, error);
-            return false;
-        }
-        glfwMakeContextCurrent(window);
-
-        BOYD_LOG(Debug, "OpenGL: {} ({})", glGetString(GL_VERSION), glGetString(GL_VENDOR));
-        if(!flextInit(window))
-        {
-            BOYD_LOG(Error, "flextGL failed!");
-            return false;
-        }
-
-        return true;
-    }
-};
-
-} // namespace boyd
 
 using namespace boyd;
 
@@ -113,7 +24,9 @@ extern "C" {
 BOYD_API void *BoydInit_Gfx()
 {
     BOYD_LOG(Info, "Starting Gfx module");
-    return new BoydGfxState;
+    auto *state = new BoydGfxState;
+    InitInput(state);
+    return state;
 }
 
 BOYD_API void BoydUpdate_Gfx(void *statePtr)
@@ -226,7 +139,7 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
 
     // Poll input at end of frame to minimize delay between the Gfx system running (that should be the last one in the sequence)
     // and the next frame
-    glfwPollEvents();
+    UpdateInput(gfxState);
 
     if(glfwWindowShouldClose(gfxState->window))
     {

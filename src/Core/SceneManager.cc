@@ -11,7 +11,6 @@
 #include "../Components/Skybox.hh"
 #include "../Components/Transform.hh"
 #include "GameState.hh"
-#include "MusicAssetLoader.hh"
 #include "SceneManager.hh"
 #include <utility>
 
@@ -29,16 +28,25 @@ void boyd::SceneManager::LoadScene(const std::filesystem::path &scene)
     // Just instantiate random stuff
     auto mainCam = registry.create();
     registry.assign<boyd::comp::Transform>(mainCam,
-                                           glm::lookAt(glm::vec3{-5.0f, -5.0f, -5.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec3{0.0f, 1.0f, 0.0f}));
-    registry.assign<boyd::comp::Camera>(mainCam, boyd::comp::Camera::Perspective(90.0f));
+                                           glm::lookAt(glm::vec3{-10.0f, -5.0f, -10.0f}, glm::vec3{0.0f, 5.0f, 0.0f}, glm::vec3{0.0f, 1.0f, 0.0f}));
+    registry.assign<boyd::comp::Camera>(mainCam, boyd::comp::Camera::Perspective(45.0f));
     registry.assign<boyd::comp::ActiveCamera>(mainCam);
     //registry.assign<boyd::comp::Skybox>(mainCam, "assets/Textures/dresden_square.hdr");
 
     auto object = registry.create();
-    registry.assign<boyd::comp::Transform>(object, glm::rotate(glm::identity<glm::mat4>(), glm::pi<float>(), {0.0f, 1.0f, 0.0f}));
+    registry.assign<boyd::comp::Transform>(object, glm::translate(glm::rotate(glm::identity<glm::mat4>(), glm::pi<float>(), {0.0f, 1.0f, 0.0f}), glm::vec3{0.0f, 5.0f, 0.0f}));
     registry.assign<boyd::comp::Gltf>(object);
     boyd::comp::ComponentLoadRequest req{
         {boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::Gltf>(), "assets/GLTF/SuzanneColor0.glb"},
     };
+
+    auto object2 = registry.create();
+    registry.assign<boyd::comp::Transform>(object2, glm::translate(glm::identity<glm::mat4>(), glm::vec3{0.0f, 0.0f, 0.0f}));
+    registry.assign<boyd::comp::Gltf>(object2);
+    boyd::comp::ComponentLoadRequest req2{
+        {boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::Gltf>(), "assets/GLTF/SampleCube.gltf.glb"},
+    };
+
     registry.assign<boyd::comp::ComponentLoadRequest>(object, std::move(req));
+    registry.assign<boyd::comp::ComponentLoadRequest>(object2, std::move(req2));
 }
