@@ -20,8 +20,8 @@ struct BOYD_API InputState
     /// 5: Exploration2 horiz, mapped from LEFT (-1) and RIGHT (+1)
     /// 6: Jump Trigger, mapped from Space (0: unpressed, 1: pressed)
     /// 7: Sprint Trigger, mapped from Shift (0: unpressed, 1: pressed)
-    /// 8-33: If available, all the other alphabetic keys (0: unpressed, 1: pressed), else just a bunch of zeros
-    /// 34-43: If available, all the other numeric keys (0: unpressed, 1: pressed).
+    /// 8-17: If available, all the other alphabetic keys (0: unpressed, 1: pressed), else just a bunch of zeros
+    /// 18-43: If available, all the other numeric keys (0: unpressed, 1: pressed).
     /// Supporting the gamepad would be nice but is currently not planned.
     ///
     /// The axis array is kept as an enum to make int castings easier for Lua
@@ -35,11 +35,18 @@ struct BOYD_API InputState
         AXIS_EXPLORATION2_VERT = 5,
         AXIS_JUMP_TRIGGER = 6,
         AXIS_SPRINT_TRIGGER = 7,
-        AXIS_OTHER_TRIGGER = 8
+        AXIS_NUMERIC_TRIGGER = 8,
+        AXIS_ALPHABETIC_TRIGGER
     };
 
-    static constexpr int NUM_AXES = 35;
+    static constexpr int NUM_AXES = 44;
     float axes[NUM_AXES];
+
+    /// Mouse coordinates, relative to the top-left corner.
+    struct MousePosition
+    {
+        float xpos, ypos;
+    } mousePosition;
 };
 
 /// The whole game state, shared among modules.
