@@ -286,9 +286,9 @@ void RegisterAllLuaTypes(BoydScriptingState *state)
 
     // Input bindings
     // clang-format off
-    ns = ns.beginClass<InputState>("Input")
-        .addStaticFunction("getAxis", &LuaInput::getAxis)
-    .endClass();
+    ns = ns.beginNamespace("Input")
+        .addFunction("getAxis", &LuaInput::getAxis)
+    .endNamespace();
 
     // clang-format on
 

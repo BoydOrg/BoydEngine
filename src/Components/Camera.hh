@@ -53,7 +53,7 @@ using ActiveCamera = entt::tag<"ActiveCamera"_hs>;
 template <typename TRegister>
 struct Registrar<comp::Camera, TRegister>
 {
-    static constexpr const char *TYPENAME = "Transform";
+    static constexpr const char *TYPENAME = "Camera";
 
     /// Creates a perspective camera. fov is the horizontal FoV *in degrees*.
     static comp::Camera Perspective(const comp::Camera *self, float fov, float zNear = 0.1f, float zFar = 1000.0f)
@@ -94,12 +94,6 @@ struct Registrar<comp::ActiveCamera, TRegister>
 {
     static constexpr const char *TYPENAME = "ActiveCamera";
 
-    static comp::ActiveCamera MakeActive(comp::ActiveCamera *self)
-    {
-        (void)self;
-        return comp::ActiveCamera{};
-    }
-
     static std::string ToString(const comp::ActiveCamera *self)
     {
         (void)self;
@@ -111,7 +105,6 @@ struct Registrar<comp::ActiveCamera, TRegister>
         // clang-format off
         return reg.template beginClass<comp::ActiveCamera>(TYPENAME)
             .template addConstructor<void(*)(void)>()
-            .addFunction("makeActive", MakeActive)
             .addFunction("__tostring", ToString)
         .endClass();
         // clang-format on
