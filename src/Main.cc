@@ -55,8 +55,12 @@ int main(void)
     // Failure to follow this sequence can currently result in crashes-on-exit due to `dlclose()`d libraries!
     for(auto &module : modules)
     {
-        module.HaltFunc(module.data);
-        module.HaltFunc = nullptr;
+        /// FIX(ENRICO) do not call HaltFunc if not existing (e.g. the library was not loaded)
+        if(module.HaltFunc)
+        {
+            module.HaltFunc(module.data);
+            module.HaltFunc = nullptr;
+        }
     }
     GameStateManager::Instance().~GameStateManager();
 #endif

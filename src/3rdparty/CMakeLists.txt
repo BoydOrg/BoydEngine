@@ -29,6 +29,8 @@ add_subdirectory(polyvox)
 add_library(polyvox INTERFACE)
 target_include_directories(polyvox INTERFACE ${PolyVoxHeaders_SOURCE_DIR})
 
+# ReactPhysics3dd - https://github.com/DanielChappuis/reactphysics3d - License: zlib
+add_subdirectory(reactphysics3d)
 # tinygltf - https://github.com/syoyo/tinygltf - License: MIT
 set(TINYGLTF_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_library(tinygltf INTERFACE)

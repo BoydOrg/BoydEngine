@@ -69,16 +69,23 @@ boyd_module(NAME Scripting PRIORITY 1
     LINKS LuaBridge ${BOYD_LUA}
 )
 
+
 boyd_module(NAME AssetLoader PRIORITY 2
     SOURCES AssetLoader/AssetLoader.cc
             AssetLoader/Loaders/AllLoaders.cc
     LINKS tinygltf
 )
 
+boyd_module(NAME Physics PRIORITY 10
+    SOURCES Physics/Physics.cc
+    LINKS reactphysics3d
+)
+
 boyd_module(NAME Audio PRIORITY 20
     SOURCES Audio/Audio.cc Audio/Utils.cc
     LINKS OpenAL
 )
+
 
 boyd_module(NAME Gfx PRIORITY 99
     SOURCES Gfx/Gfx.cc Gfx/GL3.cc
