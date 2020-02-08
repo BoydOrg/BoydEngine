@@ -20,6 +20,10 @@ add_subdirectory(glm/)
 set(ALSOFT_BACKEND_SDL2 OFF CACHE BOOL "" FORCE) # disable SDL2 mixer
 set(ALSOFT_EXAMPLES OFF CACHE BOOL "" FORCE)     # Examples use SDL1 which cause us redefinition issues with raylib
 add_subdirectory(openal-soft)
+set_target_properties(OpenAL PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY $<TARGET_FILE_DIR:BoydEngine>
+    LIBRARY_OUTPUT_DIRECTORY $<TARGET_FILE_DIR:BoydEngine>
+)
 
 # Polyvox - https://bitbucket.org/volumesoffun/polyvox.git - License: zlib
 set(ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -31,6 +35,7 @@ target_include_directories(polyvox INTERFACE ${PolyVoxHeaders_SOURCE_DIR})
 
 # ReactPhysics3dd - https://github.com/DanielChappuis/reactphysics3d - License: zlib
 add_subdirectory(reactphysics3d)
+
 # tinygltf - https://github.com/syoyo/tinygltf - License: MIT
 set(TINYGLTF_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_library(tinygltf INTERFACE)

@@ -193,14 +193,14 @@ public:
 
     static std::filesystem::path GetModulePath(const std::string name)
     {
-        return std::filesystem::path{"lib/lib"} += (name +
+        return std::filesystem::path{"modules/"} +=
 #ifdef BOYD_PLATFORM_POSIX
-                                                    ".so"
+               ("lib" + name + ".so")
 #else
-                                                    ".dll"
+               (name + ".dll")
 #endif
-               );
+            ;
     }
-};
+}; // namespace boyd
 
 } // namespace boyd
