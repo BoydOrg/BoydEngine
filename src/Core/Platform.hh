@@ -23,3 +23,10 @@
 #else
 #    error "Unknown compiler!"
 #endif
+
+#if defined(BOYD_CXX_GCCLIKE) && (defined(__i386__) || defined(__x86_64__))
+#    define BOYD_DEBUGGER_TRAP() __asm__ __volatile__("int3")
+#else
+#    include <debugapi.h>
+#    define BOYD_DEBUGGER_TRAP() DebugBreak()
+#endif

@@ -1,8 +1,10 @@
 #include "Registrar.hh"
 
 #include "../../Core/GameState.hh"
+#include "../../Debug/Log.hh"
 #include <fmt/format.h>
 #include <string>
+#include <unordered_map>
 
 #include "../../Components/AllTypes.hh"
 
@@ -255,6 +257,31 @@ struct LuaInput
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
+#ifdef DEBUG
+
+/// Sanity check to prevent cryptic crashes: all types need unique TYPENAMEs
+static bool AllLuaTypesAreUnique()
+{
+    using TRegister = luabridge::Namespace;
+
+    std::unordered_map<std::string, unsigned> counts;
+#    define BOYD_REGISTER_TYPE(tname) ++counts[Registrar<tname, TRegister>::TYPENAME];
+    BOYD_REGISTER_ALLTYPES()
+#    undef BOYD_REGISTER_TYPE
+
+    bool allUnique = true;
+    for(const auto &pair : counts)
+    {
+        if(pair.second > 1)
+        {
+            BOYD_LOG(Error, "Registrar: TYPENAME={} is not unique - it was registered {} times!", pair.first, pair.second);
+            allUnique = false;
+        }
+    }
+    return allUnique;
+}
+#endif
+
 void RegisterAllLuaTypes(BoydScriptingState *state)
 {
     // Add a pointer to `state` to its lua_State so that we can get it back from Lua functions
@@ -262,6 +289,14 @@ void RegisterAllLuaTypes(BoydScriptingState *state)
 
     using TRegister = luabridge::Namespace;
     auto ns = luabridge::getGlobalNamespace(state->L).beginNamespace(BOYD_NAMESPACE);
+
+#ifdef DEBUG
+    /// Sanity check to prevent cryptic crashes: all types need unique TYPENAMEs
+    if(!AllLuaTypesAreUnique())
+    {
+        BOYD_DEBUGGER_TRAP();
+    }
+#endif
 
     // Register all types to Lua and their CompRef factories to `compFactory`
 #define BOYD_REGISTER_TYPE(tname)                   \
