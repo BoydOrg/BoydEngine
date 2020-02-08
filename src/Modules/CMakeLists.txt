@@ -72,6 +72,7 @@ boyd_module(NAME Scripting PRIORITY 1
 boyd_module(NAME AssetLoader PRIORITY 2
     SOURCES AssetLoader/AssetLoader.cc
             AssetLoader/Loaders/AllLoaders.cc
+    LINKS tinygltf
 )
 
 boyd_module(NAME Audio PRIORITY 20

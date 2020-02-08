@@ -6,6 +6,7 @@
 #include "../Components/AudioSource.hh"
 #include "../Components/Camera.hh"
 #include "../Components/ComponentLoadRequest.hh"
+#include "../Components/Gltf.hh"
 #include "../Components/Mesh.hh"
 #include "../Components/Skybox.hh"
 #include "../Components/Transform.hh"
@@ -35,5 +36,9 @@ void boyd::SceneManager::LoadScene(const std::filesystem::path &scene)
 
     auto object = registry.create();
     registry.assign<boyd::comp::Transform>(object, glm::identity<glm::mat4>());
-    //registry.assign<boyd::comp::Mesh>(object, "assets/GLTF/SuzanneColor0.glb");
+    registry.assign<boyd::comp::Gltf>(object);
+    boyd::comp::ComponentLoadRequest req{
+        {boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::Gltf>(), "assets/GLTF/SuzanneColor0.glb"},
+    };
+    registry.assign<boyd::comp::ComponentLoadRequest>(object, std::move(req));
 }
