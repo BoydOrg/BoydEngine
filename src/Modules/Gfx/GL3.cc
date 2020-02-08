@@ -25,37 +25,44 @@ namespace boyd
 namespace gl3
 {
 
+/// Makes a buffer out of a block of data.
+/// Returns 0 on error.
+GLuint UploadBuffer(GLenum target, const void *data, size_t dataSize, GLenum usage)
+{
+    GLuint buffer = 0;
+    glGenBuffers(1, &buffer);
+    BOYD_CHECK(buffer != 0, "Failed to create buffer (target={})", target)
+
+    glBindBuffer(target, buffer);
+    glBufferData(target, dataSize, data, usage);
+    glBindBuffer(target, 0);
+
+    return buffer;
+}
+
 bool UploadMesh(const comp::Mesh &mesh, gl3::Mesh &gpuMesh)
 {
-    if(gpuMesh.vao == 0)
-    {
-        glGenVertexArrays(1, &gpuMesh.vao);
-        BOYD_CHECK(gpuMesh.vao != 0, "Failed to create VAO")
-    }
-    if(gpuMesh.vbo == 0)
-    {
-        glGenBuffers(1, &gpuMesh.vbo);
-        BOYD_CHECK(gpuMesh.vbo != 0, "Failed to create VBO")
-    }
-    if(gpuMesh.ibo == 0)
-    {
-        glGenBuffers(1, &gpuMesh.ibo);
-        BOYD_CHECK(gpuMesh.ibo != 0, "Failed to create IBO")
-    }
+    gpuMesh.vao = SharedVertexArray();
+    BOYD_CHECK(gpuMesh.vao != 0, "Failed to create VAO")
 
     glBindVertexArray(gpuMesh.vao);
 
-    glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.vbo);
-    glBufferData(GL_ARRAY_BUFFER,
-                 mesh.data->vertices.size() * sizeof(comp::Mesh::Vertex), mesh.data->vertices.data(),
-                 GL_USAGE_MAP[mesh.data->usage]);
-
+    gpuMesh.ibo = SharedBuffer(GL_ELEMENT_ARRAY_BUFFER,
+                               mesh.data->indices.size() * sizeof(comp::Mesh::Index),
+                               mesh.data->indices.data(),
+                               GL_USAGE_MAP[mesh.data->usage]);
+    BOYD_CHECK(gpuMesh.ibo != 0, "Failed to create IBO")
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpuMesh.ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 mesh.data->indices.size() * sizeof(comp::Mesh::Index), mesh.data->indices.data(),
-                 GL_USAGE_MAP[mesh.data->usage]);
+
+    gpuMesh.vbo = SharedBuffer(GL_ARRAY_BUFFER,
+                               mesh.data->vertices.size() * sizeof(comp::Mesh::Vertex),
+                               mesh.data->vertices.data(),
+                               GL_USAGE_MAP[mesh.data->usage]);
+    BOYD_CHECK(gpuMesh.vbo != 0, "Failed to create VBO")
+    glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.vbo);
 
     // Vertex attrib pointers - see the layout of `comp::Mesh::Vertex`!
+
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, false,
                           sizeof(comp::Mesh::Vertex), BOYD_OFFSETOF(comp::Mesh::Vertex, position));
