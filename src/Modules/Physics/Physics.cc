@@ -6,6 +6,7 @@
 #include "../../Core/Platform.hh"
 #include "../../Debug/Log.hh"
 
+#include <chrono>
 #include <entt/entt.hpp>
 #include <reactphysics3d.h>
 
@@ -19,7 +20,8 @@ struct BoydPhysicsState
 
     DynamicsWorld *world;
     entt::observer entt_Colliders[1];
-    float timeStep;
+    float timeStep, timeDelta{0.0f};
+    std::chrono::time_point<std::chrono::system_clock> lastFrame;
 
     BoydPhysicsState(entt::registry &registry)
     {
@@ -28,6 +30,7 @@ struct BoydPhysicsState
 
         /// TODO: Add the other colliders
         timeStep = 1.0f / 60.0f;
+        lastFrame = std::chrono::system_clock::now();
     }
 
     /// Register a collider into an observer.
@@ -87,8 +90,16 @@ BOYD_API void BoydUpdate_Physics(void *state)
                                                                                rigidBody, transform);
     }
 
-    /// TODO: add the other colliders
-    physicsState->world->update(physicsState->timeStep);
+    auto curFrame = chrono::system_clock::now();
+    physicsState->timeDelta += chrono::duration<float>{curFrame - physicsState->lastFrame}.count();
+    physicsState->lastFrame = curFrame;
+
+    if(physicsState->timeDelta >= physicsState->timeStep)
+    {
+        /// TODO: add the other colliders
+        physicsState->world->update(physicsState->timeDelta);
+        physicsState->timeDelta = 0.0f;
+    }
 
     /// Copy the transforms
     for(auto entity : rigidBodiesView)
@@ -114,6 +125,7 @@ BOYD_API void BoydHalt_Physics(void *state)
     // Destroy them!
     registry.destroy(boxColliderInternals.begin(), boxColliderInternals.end());
 
+    // Purge the internal state
     delete physicsState;
 }
 }
