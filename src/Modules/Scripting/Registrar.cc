@@ -244,10 +244,17 @@ struct LuaEntity
     {
         return fmt::format(FMT_STRING("Entity({})"), id);
     }
-}; // namespace boyd
+};
+
+struct LuaInput
+{
+    static float getAxis(int index)
+    {
+        return Boyd_GameState()->Input.axes[index];
+    }
+};
 
 // ---------------------------------------------------------------------------------------------------------------------
-
 void RegisterAllLuaTypes(BoydScriptingState *state)
 {
     // Add a pointer to `state` to its lua_State so that we can get it back from Lua functions
@@ -274,6 +281,15 @@ void RegisterAllLuaTypes(BoydScriptingState *state)
         .addFunction("__tostring", &LuaEntity::ToString)
         .addProperty("id", &LuaEntity::id, false)
     .endClass();
+
+    // clang-format on
+
+    // Input bindings
+    // clang-format off
+    ns = ns.beginClass<InputState>("Input")
+        .addStaticFunction("getAxis", &LuaInput::getAxis)
+    .endClass();
+
     // clang-format on
 
     ns.endNamespace();
