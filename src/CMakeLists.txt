@@ -10,6 +10,7 @@ add_executable(BoydEngine WIN32
 set_target_properties(BoydEngine PROPERTIES
     DEFINE_SYMBOL BOYD_DLL_EXPORTS
     ENABLE_EXPORTS YES
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin"
 )
 
 # Need std::thread...
