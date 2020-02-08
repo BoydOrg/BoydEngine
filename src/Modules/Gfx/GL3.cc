@@ -73,5 +73,63 @@ bool UploadMesh(const comp::Mesh &mesh, GLMesh &gpuMesh)
     return true;
 }
 
+GLuint CompileShader(GLenum type, std::string source)
+{
+    GLuint shader = glCreateShader(type);
+    BOYD_CHECK(shader != 0, "Failed to create shader");
+
+    const char *srcStr = source.data();
+    glShaderSource(shader, 1, &srcStr, nullptr);
+    glCompileShader(shader);
+
+    GLint ok = false;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+    if(!ok)
+    {
+        GLint logLen = 0;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLen);
+        std::vector<GLchar> log(logLen, '\0');
+        glGetShaderInfoLog(shader, log.size(), nullptr, log.data());
+        BOYD_LOG(Warn, "Failed to compile shader:\n{}", log.data());
+
+        glDeleteShader(shader);
+        return 0;
+    }
+
+    return shader;
+}
+
+GLuint LinkProgram(const std::vector<GLuint> &shaders)
+{
+    GLuint program = glCreateProgram();
+    BOYD_CHECK(program != 0, "Failed to create shader program");
+
+    for(GLuint shader : shaders)
+    {
+        glAttachShader(program, shader);
+    }
+    glLinkProgram(program);
+    for(GLuint shader : shaders)
+    {
+        glDetachShader(program, shader);
+    }
+
+    GLint ok = false;
+    glGetProgramiv(program, GL_LINK_STATUS, &ok);
+    if(!ok)
+    {
+        GLint logLen = 0;
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLen);
+        std::vector<GLchar> log(logLen, '\0');
+        glGetProgramInfoLog(program, log.size(), nullptr, log.data());
+        BOYD_LOG(Warn, "Failed to link shader program:\n{}", log.data());
+
+        glDeleteProgram(program);
+        return 0;
+    }
+
+    return program;
+}
+
 } // namespace gl3
 } // namespace boyd
