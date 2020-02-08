@@ -30,6 +30,7 @@ struct BoydGfxState
     struct
     {
         GLuint handle;
+        GLuint nullTextureHandle;   ///< A handle to a 1x1px white (aka "null") texture.
         GLint uModelViewProjection; ///< `u_ModelViewProjection`
         GLint uTexture;             ///< `u_Texture`
 
@@ -53,6 +54,8 @@ struct BoydGfxState
         meshMap.clear();
         glDeleteProgram(standardSP.handle);
         standardSP.handle = 0;
+        glDeleteTextures(1, &standardSP.nullTextureHandle);
+        standardSP.nullTextureHandle = 0;
 
         // Deinit GLFW
         if(window)
@@ -156,6 +159,19 @@ private:
         standardSP.uModelViewProjection = glGetUniformLocation(standardSP.handle, "u_ModelViewProjection");
         standardSP.uTexture = glGetUniformLocation(standardSP.handle, "u_Texture");
 
+        // Generate the "null" texture
+        glGenTextures(1, &standardSP.nullTextureHandle);
+        glBindTexture(GL_TEXTURE_2D, standardSP.nullTextureHandle);
+
+        static constexpr const uint8_t WHITE[3] = {255, 255, 255};
+        glTexImage2D(GL_TEXTURE_2D, 0,
+                     GL_RGB8, 1, 1, 0, GL_RGB,
+                     GL_UNSIGNED_BYTE, WHITE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+
         return true;
     }
 };
@@ -237,11 +253,14 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
     // -------------------------------------------------------------------------
 
     glfwMakeContextCurrent(gfxState->window);
+    glViewport(0, 0, screenW, screenH);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     // TODO: ONLY RENDER MESHES WITH MESHRENDERERS COMPONENTS IN THEM!
     // TODO: HANDLE MATERIAL COMPONENTS!
 
     glUseProgram(gfxState->standardSP.handle);
+    glEnable(GL_DEPTH_TEST);
 
     gameState->ecs.view<comp::Transform, comp::Mesh>()
         .each([&](auto entity, const auto &transform, auto &mesh) {
@@ -268,11 +287,18 @@ BOYD_API void BoydUpdate_Gfx(void *statePtr)
             glm::mat4 mvpMtx = viewProjectionMtx * transform.matrix;
             glUniformMatrix4fv(gfxState->standardSP.uModelViewProjection, 1, false, &mvpMtx[0][0]);
 
+            // TODO: Handle the real texture
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, gfxState->standardSP.nullTextureHandle);
+            glUniform1i(gfxState->standardSP.uTexture, 0); // (TEXTURE0)
+
             glBindVertexArray(gpuMesh->vao);
             glDrawElements(GL_TRIANGLES, mesh.data->indices.size(), GL_UNSIGNED_INT, nullptr);
         });
 
+    glDisable(GL_DEPTH_TEST);
     glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glUseProgram(0);
 
     // -------------------------------------------------------------------------
