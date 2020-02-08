@@ -3,6 +3,7 @@
 #include "../Core/Platform.hh"
 #include "BoxCollider.hh"
 #include "ColliderBase.hh"
+#include "RigidBody.hh"
 #include "Transform.hh"
 #include <memory>
 #include <reactphysics3d.h>
@@ -74,7 +75,7 @@ struct BOYD_API ColliderInternals
         material.setRollingResistance(rigidBody.rollingFriction);
 
         colliderHandler = GetCollider(collider);
-        proxyShape = rigidBodyHandler->addCollisionShape(collisionHandler, localTransform, rigidBody.mass);
+        proxyShape = rigidBodyHandler->addCollisionShape(colliderHandler, localTransform, rigidBody.mass);
     }
 
     /// Empty internals are useless, and colliders should not be shared.
@@ -90,15 +91,18 @@ struct BOYD_API ColliderInternals
         // Delete the collider
         delete colliderHandler;
         // ... then the proxy shape
-        rigidBody->removeCollisionShape(proxyShape);
+        rigidBodyHandler->removeCollisionShape(proxyShape);
         // ... then the rigid body
-        world->destroyRigidBody(rigidBody);
+        world->destroyRigidBody(rigidBodyHandler);
+
+        colliderHandler = nullptr;
+        rigidBodyHandler = nullptr;
     }
 
     void UpdateTransform(boyd::comp::Transform &transform)
     {
         rp3d::Transform temp = rigidBodyHandler->getTransform();
-        temp.getOpenGLMatrix((void *)&transform.matrix);
+        temp.getOpenGLMatrix((float *)&transform.matrix);
     }
 };
 } // namespace comp

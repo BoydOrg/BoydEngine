@@ -12,6 +12,7 @@
 using namespace reactphysics3d;
 
 using namespace std;
+using namespace boyd;
 
 struct BoydPhysicsState
 {
@@ -23,17 +24,18 @@ struct BoydPhysicsState
     BoydPhysicsState(entt::registry &registry)
     {
         world = new DynamicsWorld(rp3d::Vector3{0.0, 9.81, 0.0});
-        RegisterCollider<comp::BoxCollider>(registry, BOX_COLLIDER);
+        RegisterCollider<comp::BoxCollider>(registry, Collider::BOX_COLLIDER);
 
         /// TODO: Add the other colliders
         timeStep = 1.0f / 60.0f;
     }
 
     /// Register a collider into an observer.
-    template <typename Collider>
-    void RegisterCollider(entt::registry &registry, boyd::Collider type)
+    template <typename ColliderComponent>
+    void RegisterCollider(entt::registry &registry, Collider type)
     {
-        observer.connect(registry, entt::collector<comp::RigidBody, T> (entt::exclude<comp::ColliderInternals<Collider>>());
+        entt_Colliders[type].connect(registry, entt::collector.group<comp::RigidBody, ColliderComponent>(
+                                                   entt::exclude<comp::ColliderInternals<ColliderComponent>>));
     }
 
     ~BoydPhysicsState()
@@ -44,11 +46,12 @@ struct BoydPhysicsState
 
 /// Update the transform of a non-static rigid body.
 /// This method is templetized because we do not know which collider is used. Luckily it's only 4 of them ...
-template <typename Collider>
-void UpdateTransform(entt::entity entity, entt::registry &registry, boyd::comp::RigidBody &rigidBody, boyd::comp::Transform &transform)
+template <typename ColliderType>
+void UpdateTransform(entt::entity entity, entt::registry &registry, comp::RigidBody &rigidBody, comp::Transform &transform)
 {
-    using Internals = comp::ColliderInternals<Collider>;
-    if(registry.has<Internals>())
+    using Internals = comp::ColliderInternals<ColliderType>;
+
+    if(registry.has<Internals>(entity))
     {
         registry.get<Internals>(entity).UpdateTransform(transform);
     }
@@ -58,8 +61,6 @@ inline BoydPhysicsState *GetState(void *state)
 {
     return reinterpret_cast<BoydPhysicsState *>(state);
 }
-
-using namespace boyd;
 
 extern "C" {
 BOYD_API void *BoydInit_Physics(void)
@@ -81,8 +82,8 @@ BOYD_API void BoydUpdate_Physics(void *state)
         auto &transform = rigidBodiesView.get<comp::Transform>(entity);
         auto &boxCollider = boxCollidersView.get(entity);
         registry.assign_or_replace<comp::ColliderInternals<comp::BoxCollider>>(entity,
-                                                                               boxCollider,
                                                                                physicsState->world,
+                                                                               boxCollider,
                                                                                rigidBody, transform);
     }
 
@@ -97,7 +98,7 @@ BOYD_API void BoydUpdate_Physics(void *state)
 
         if(rigidBody.type != comp::RigidBody::STATIC)
         {
-            UpdateTransform<boyd::comp::BoxCollider>(entity, registry, rigidBody, transform);
+            UpdateTransform<comp::BoxCollider>(entity, registry, rigidBody, transform);
         }
     }
 }

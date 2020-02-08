@@ -13,8 +13,8 @@ namespace comp
 /// A wrapper on a box collider
 struct BOYD_API BoxCollider : ColliderBase
 {
-    int x, y, z;
-    BoxCollider(int x, int y, int z)
+    float x, y, z;
+    BoxCollider(float x, float y, float z)
         : x{x}, y{y}, z{z}
     {
     }
