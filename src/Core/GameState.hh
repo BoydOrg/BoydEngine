@@ -45,7 +45,7 @@ struct BOYD_API InputState
     /// Mouse coordinates, relative to the top-left corner.
     struct MousePosition
     {
-        float xpos, ypos;
+        double xpos, ypos;
     } mousePosition;
 };
 

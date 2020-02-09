@@ -15,11 +15,18 @@ void InitInput(BoydGfxState *state)
     glfwSetKeyCallback(state->window, GLFWKeyCallback);
     glfwSetCursorPosCallback(state->window, GLFWMouseCallback);
     glfwSetInputMode(state->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    auto &inputState = Boyd_GameState()->Input;
+
+    std::fill(inputState.axes, inputState.axes + inputState.NUM_AXES, 0.0);
+    glfwGetCursorPos(state->window, &inputState.mousePosition.xpos, &inputState.mousePosition.ypos);
 }
 
 /// Placeholder for something else later on
 void UpdateInput(BoydGfxState *state)
 {
+    auto &inputState = Boyd_GameState()->Input;
+    inputState.axes[0] = inputState.axes[1] = 0.0;
     glfwPollEvents();
 }
 
@@ -90,8 +97,8 @@ void GLFWMouseCallback(GLFWwindow *window, double xpos, double ypos)
 {
     InputState &input = Boyd_GameState()->Input;
 
-    float deltaX = xpos - input.mousePosition.xpos;
-    float deltaY = ypos - input.mousePosition.ypos;
+    double deltaX = xpos - input.mousePosition.xpos;
+    double deltaY = ypos - input.mousePosition.ypos;
 
     input.mousePosition.xpos = xpos;
     input.mousePosition.ypos = ypos;
@@ -101,10 +108,8 @@ void GLFWMouseCallback(GLFWwindow *window, double xpos, double ypos)
     glfwGetWindowSize(window, &width, &height);
 
     /// TODO: consider multiplying these by a scaling factor (aka "sensitivity")
-    input.axes[input.AXIS_CAMERA_HORIZ] = deltaX / width;
-    input.axes[input.AXIS_CAMERA_VERT] = deltaY / height;
-
-    BOYD_LOG(Info, "Mouse axes: {} {}", input.axes[input.AXIS_CAMERA_HORIZ], input.axes[input.AXIS_CAMERA_VERT]);
+    input.axes[input.AXIS_CAMERA_HORIZ] = -deltaX;
+    input.axes[input.AXIS_CAMERA_VERT] = -deltaY;
 }
 
 } // namespace boyd
