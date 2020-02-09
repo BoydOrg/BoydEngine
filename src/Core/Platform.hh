@@ -2,6 +2,8 @@
 
 #if defined(WIN32) || defined(_WIN32)
 #    define BOYD_PLATFORM_WIN32
+#elif defined(__EMSCRIPTEN__)
+#    define BOYD_PLATFORM_EMSCRIPTEN
 #else
 #    define BOYD_PLATFORM_POSIX
 #endif
@@ -30,12 +32,20 @@
 #    error "Unknown compiler!"
 #endif
 
-#if defined(BOYD_CXX_GCCLIKE) && (defined(__i386__) || defined(__x86_64__))
-#    define BOYD_DEBUGGER_TRAP() __asm__ __volatile__("int3")
-#else
-//   #include <Windows.h> -> #include <debugapi.h>
+#if (defined(__i386__) || defined(__x86_64__))
+#    if defined(BOYD_CXX_GCCLIKE)
+#        define BOYD_DEBUGGER_TRAP() __asm__ __volatile__("int3")
+#    elif defined(BOYD_PLATFORM_WIN32)
+//       #include <Windows.h> -> #include <debugapi.h>
 extern "C" {
 __declspec(dllimport) void __stdcall DebugBreak();
 }
-#    define BOYD_DEBUGGER_TRAP() DebugBreak()
+#        define BOYD_DEBUGGER_TRAP() DebugBreak()
+#   else
+#        define BOYD_DEBUGGER_TRAP()
+#   endif
+#elif defined(BOYD_PLATFORM_EMSCRIPTEN)
+#    define BOYD_DEBUGGER_TRAP() EM_ASM(debugger;)
+#else
+#    define BOYD_DEBUGGER_TRAP()
 #endif

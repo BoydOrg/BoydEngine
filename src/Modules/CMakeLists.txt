@@ -49,6 +49,8 @@ macro(boyd_module)
     target_include_directories(${_BOYD_MODULE_NAME} BEFORE PUBLIC
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
         ${_BOYD_MODULE_INCLUDES}
+        # NOTE: Include all include directories of the parent executable
+        $<TARGET_PROPERTY:BoydEngine,INCLUDE_DIRECTORIES>
     ) 
     target_link_libraries(${_BOYD_MODULE_NAME} PUBLIC
         ${_BOYD_MODULE_LINKS}

@@ -49,11 +49,14 @@ bool BoydGfxState::InitContext()
     glfwMakeContextCurrent(window);
 
     BOYD_LOG(Debug, "OpenGL: {} ({})", glGetString(GL_VERSION), glGetString(GL_VENDOR));
+
+#ifdef BOYD_GLES3_FLEXTGL
     if(!flextInit(window))
     {
         BOYD_LOG(Error, "flextGL failed!");
         return false;
     }
+#endif
 
     return true;
 }
