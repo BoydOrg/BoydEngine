@@ -14,7 +14,7 @@ namespace Frame
 {
 glm::vec3 zero{0.0f, 0.0f, 0.0f};
 glm::vec3 top{0.0f, 1.0f, 0.0f};
-glm::vec3 right{1.0f, 1.0f, 0.0f};
+glm::vec3 right{1.0f, 0.0f, 0.0f};
 glm::vec3 bottom{0.0f, -1.0f, 0.0f};
 glm::vec3 left{-1.0f, 1.0f, 0.0f};
 glm::vec3 front{0.0f, 0.0f, -1.0f};
