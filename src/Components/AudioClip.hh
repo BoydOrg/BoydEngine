@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Core/Platform.hh"
+#include "../Core/Registrar.hh"
 #include <memory>
 
 namespace boyd
@@ -27,7 +28,6 @@ struct BOYD_API AudioClip
     AudioClip() = default;
 
     /// Creates an audioclip from the given Wave.
-    /// WARNING: It will be automatically `UnloadWave()`d by the component!
     AudioClip(Wave &&wave)
         : wave{wave}
     {
@@ -40,4 +40,20 @@ struct BOYD_API AudioClip
 };
 
 } // namespace comp
+
+template <typename TRegister>
+struct Registrar<comp::AudioClip, TRegister>
+{
+    static constexpr const char *TYPENAME = "AudioClip";
+
+    static TRegister Register(TRegister &reg)
+    {
+        // clang-format off
+        /// Audio sources shoud not be constructible from Lua
+        return reg.template beginClass<comp::AudioClip>(TYPENAME)
+        .endClass();
+        // clang-format on
+    }
+};
+
 } // namespace boyd

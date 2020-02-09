@@ -56,7 +56,7 @@ struct Registrar<comp::ComponentLoadRequest, TRegister>
 
     static comp::ComponentLoadRequest Add(comp::ComponentLoadRequest *self, std::string asset, ENTT_ID_TYPE typeId)
     {
-        return comp::ComponentLoadRequest{typeId, asset};
+        return comp::ComponentLoadRequest{{typeId, asset}};
     }
 
     static TRegister Register(TRegister &reg)
