@@ -10,10 +10,12 @@
 #include <string>
 
 #ifdef BOYD_PLATFORM_WIN32
-#    import <windows.h>
-#    define dlopen(library, flag) ((void *)LoadLibrary(name))
+#    define WIN32_LEAN_AND_MEAN
+#    include <Windows.h>
+#    define dlopen(library, flag) ((void *)LoadLibraryW(library))
 #    define dlclose(handle) FreeLibrary((HMODULE)handle)
 #    define dlsym(handle, sym) (void *)GetProcAddress((HMODULE)handle, sym)
+#    define dlerror() GetLastError()
 #else
 #    include <dlfcn.h>
 #endif
@@ -172,7 +174,7 @@ public:
         handle = dlopen(filepath.c_str(), RTLD_NOW | RTLD_LOCAL);
         if(!handle)
         {
-            BOYD_LOG(Error, "Failed to dlopen {}: {}", filepath.c_str(), dlerror());
+            BOYD_LOG(Error, "Failed to dlopen {}: {}", filepath.string(), dlerror());
             return;
         }
         ReloadSymbols();

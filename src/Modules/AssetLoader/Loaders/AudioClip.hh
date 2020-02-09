@@ -9,7 +9,7 @@
 #include <fstream>
 #include <memory>
 
-#if BOYD_PLATFORM_WIN32
+#ifdef BOYD_PLATFORM_WIN32
 #    include <malloc.h>
 #    include <winsock2.h>
 #else

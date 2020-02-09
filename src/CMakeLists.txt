@@ -12,6 +12,10 @@ set_target_properties(BoydEngine PROPERTIES
     ENABLE_EXPORTS YES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin"
 )
+target_compile_definitions(BoydEngine PRIVATE
+    # NOTE: PRIVATE because when BOYD_DLL_EXPORTS is set for a module it is not set for BoydEngine, and vice versa!
+    -DBOYD_DLL_EXPORTS
+)
 
 # Need std::thread...
 find_package(Threads REQUIRED)

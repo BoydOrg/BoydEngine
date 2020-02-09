@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Platform.hh"
 #include <atomic>
 #include <memory>
 #include <type_traits>
@@ -11,7 +12,7 @@ namespace boyd
 /// A shared pointer that keeps track of all modifications to its wrapped value,
 /// storing a version number of them.
 template <typename T>
-class Versioned
+class BOYD_API Versioned
 {
     friend struct std::hash<Versioned<T>>;
 

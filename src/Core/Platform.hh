@@ -13,10 +13,16 @@
 #endif
 
 #ifdef BOYD_CXX_MSVC
-#    ifdef BOYD_DLL_EXPORTS
-#        define BOYD_API __declspec(dllexport)
+#    ifdef BOYD_HOT_RELOADING
+#        define BOYD_API
+#        ifdef BOYD_DLL_EXPORTS
+#            define BOYD_API __declspec(dllexport)
+#        else
+#            define BOYD_API __declspec(dllimport)
+#        endif
 #    else
-#        define BOYD_API __declspec(dllimport)
+//       No need to export symbols if linking statically
+#        define BOYD_API
 #    endif
 #elif defined(BOYD_CXX_GCCLIKE)
 #    define BOYD_API __attribute__((visibility("default")))
@@ -27,6 +33,9 @@
 #if defined(BOYD_CXX_GCCLIKE) && (defined(__i386__) || defined(__x86_64__))
 #    define BOYD_DEBUGGER_TRAP() __asm__ __volatile__("int3")
 #else
-#    include <debugapi.h>
+//   #include <Windows.h> -> #include <debugapi.h>
+extern "C" {
+__declspec(dllimport) void __stdcall DebugBreak();
+}
 #    define BOYD_DEBUGGER_TRAP() DebugBreak()
 #endif

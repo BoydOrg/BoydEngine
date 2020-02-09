@@ -3,6 +3,7 @@
 
 #include "BoydEngine.hh"
 #include "Core/GameState.hh"
+#include "Core/Platform.hh"
 #include "Core/SceneManager.hh"
 #include "Debug/Log.hh"
 
@@ -22,7 +23,11 @@ BOYD_MODULES_LIST()
 
 using namespace boyd;
 
+#ifndef BOYD_PLATFORM_WIN32
 int main(void)
+#else
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+#endif
 {
     BOYD_LOG(Debug, "BoydEngine v{}.{}", BOYD_VERSION_MAJOR, BOYD_VERSION_MINOR);
 
