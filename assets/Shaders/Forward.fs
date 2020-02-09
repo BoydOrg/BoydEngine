@@ -1,9 +1,8 @@
 #version 300 es
 precision mediump float;
+// BoydEngine - Standard fragment shader - Forward rendering stage
 
-// BoydEngine - Standard fragment shader
-
-sampler2D u_DiffuseMap;
+uniform sampler2D u_DiffuseMap;
 
 in vec3 vo_Normal;
 in vec4 vo_TintEmission;

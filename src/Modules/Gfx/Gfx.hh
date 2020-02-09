@@ -80,12 +80,12 @@ private:
     /// If there isn't any uploads `mesh` to VRAM, then adds the pair to `meshMap` and returns the freshly-uploaded GPU mesh.
     gl3::SharedMesh MapGpuMesh(const comp::Mesh *mesh);
 
-    /// Applies all of a material's parameters to `pass`.
+    /// Applies all of a material's parameters to `program`.
     /// Loads and bits textures (via `MapGpuTexture()`) as necessary.
     /// Returns the number of textures bound.
     ///
     /// WARNING: Assumes tha `pass.program` is bound!
-    unsigned ApplyMaterialParams(const comp::Material &material, gl3::RenderPass &pass);
+    unsigned ApplyMaterialParams(const comp::Material &material, gl3::SharedProgram &program);
 };
 
 /// Called at every gfx reload

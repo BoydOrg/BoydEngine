@@ -1,12 +1,8 @@
 #version 300 es
 precision mediump float;
+// BoydEngine - Standard vertex shader - Forward rendering stage
 
-// BoydEngine - Standard vertex shader
-
-layout(std140) uniform PerInstance
-{
-    mat4 u_ModelViewProjection;
-};
+uniform mat4 u_ModelViewProjection;
 
 layout(location = 0) in vec3 vi_Position;
 layout(location = 1) in vec3 vi_Normal;

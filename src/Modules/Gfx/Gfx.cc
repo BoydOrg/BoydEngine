@@ -98,7 +98,7 @@ gl3::SharedMesh BoydGfxState::MapGpuMesh(const comp::Mesh *mesh)
     }
 }
 
-unsigned BoydGfxState::ApplyMaterialParams(const comp::Material &material, gl3::RenderPass &pass)
+unsigned BoydGfxState::ApplyMaterialParams(const comp::Material &material, gl3::SharedProgram &program)
 {
     std::string uniformName;
     unsigned nTexturesApplied = 0;
@@ -106,8 +106,8 @@ unsigned BoydGfxState::ApplyMaterialParams(const comp::Material &material, gl3::
     for(const auto &param : material.parameters)
     {
         uniformName = fmt::format(FMT_STRING("u_{}"), param.first);
-        auto uniformLocIt = pass.uniforms.find(uniformName);
-        if(uniformLocIt == pass.uniforms.end())
+        auto uniformLocIt = program.uniforms.find(uniformName);
+        if(uniformLocIt == program.uniforms.end())
         {
             continue;
         }
@@ -138,6 +138,9 @@ unsigned BoydGfxState::ApplyMaterialParams(const comp::Material &material, gl3::
             auto gpuTexture = MapGpuTexture(&std::get<comp::Texture>(param.second));
             glActiveTexture(GL_TEXTURE0 + nTexturesApplied);
             glBindTexture(GL_TEXTURE_2D, gpuTexture); // TODO: support non-2D textures?
+
+            glUniform1i(uniformLoc, nTexturesApplied); // Bind sampler to texture unit
+
             nTexturesApplied++;
         }
         break;
@@ -210,7 +213,7 @@ void BoydGfxState::Update()
     glEnable(GL_DEPTH_TEST);
     auto &stage = pipeline->stages[gl3::Pipeline::Forward];
 
-    stage.pass.Begin();
+    glUseProgram(stage.program);
 
     unsigned nTextures = 0; // Number of textures bound the previous drawcall
     gameState->ecs.view<comp::Transform, comp::Mesh, comp::Material>()
@@ -219,10 +222,10 @@ void BoydGfxState::Update()
 
             // Apply uniforms + bind the textures needed for this drawcall
             // (uploads textures to VRAM if they weren't already there)
-            unsigned nTexturesNow = ApplyMaterialParams(material, stage.pass);
+            unsigned nTexturesNow = ApplyMaterialParams(material, stage.program);
 
             glm::mat4 mvpMtx = viewProjectionMtx * transform.matrix;
-            glUniformMatrix4fv(stage.pass.uniforms["u_ModelViewProjection"], 1, false, &mvpMtx[0][0]);
+            glUniformMatrix4fv(stage.program.uniforms["u_ModelViewProjection"], 1, false, &mvpMtx[0][0]);
 
             // Unbind all textures that would be unused this drawcall
             for(unsigned i = nTextures; i > nTexturesNow; i--)
@@ -238,7 +241,7 @@ void BoydGfxState::Update()
         });
 
     glBindVertexArray(0);
-    stage.pass.End();
+    glUseProgram(0);
     glDisable(GL_DEPTH_TEST);
 
     // -------------------------------------------------------------------------

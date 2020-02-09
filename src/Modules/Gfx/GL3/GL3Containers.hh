@@ -143,10 +143,33 @@ private:
 class SharedProgram : public SharedHandle
 {
 public:
+    /// Cache of <uniform name, uniform location>, for convenience (& performance).
+    std::unordered_map<std::string, GLint> uniforms;
+
+    /// Creates a new, uninitialized (0) program.
+    SharedProgram()
+        : SharedHandle(0, Deleter)
+    {
+    }
+
     /// Takes ownership of the given shader program.
+    /// Initializes a ShaderProgram given its already-loaded `program`.
+    /// Queries all uniform locations in `program`.
     explicit SharedProgram(GLuint handle)
         : SharedHandle(handle, Deleter)
     {
+        GLint nUniforms = 0;
+        glGetProgramiv(handle, GL_ACTIVE_UNIFORMS, &nUniforms);
+
+        GLchar uniformName[64];
+        GLsizei uniformNameLen;
+        GLint uSize;
+        GLenum uType;
+        for(GLint i = 0; i < nUniforms; i++)
+        {
+            glGetActiveUniform(handle, GLuint(i), sizeof(uniformName), &uniformNameLen, &uSize, &uType, uniformName);
+            uniforms[std::string{uniformName, size_t(uniformNameLen)}] = i;
+        }
     }
 
 private:

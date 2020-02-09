@@ -14,7 +14,9 @@ void InitInput(BoydGfxState *state)
 {
     glfwSetKeyCallback(state->window, GLFWKeyCallback);
     glfwSetCursorPosCallback(state->window, GLFWMouseCallback);
+#ifndef DEBUG
     glfwSetInputMode(state->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+#endif
 }
 
 /// Placeholder for something else later on

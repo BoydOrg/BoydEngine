@@ -17,7 +17,7 @@ struct Pipeline
     };
     struct Stage
     {
-        gl3::RenderPass pass;
+        gl3::SharedProgram program;
     };
     Stage stages[_Last + 1];
 
