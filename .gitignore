@@ -89,6 +89,8 @@ luac.out
 ### VSCode ###
 .vscode/launch.json
 build/
+build-*/
+out/
 
 ### Visual Studio 2019 ###
 .vs/
