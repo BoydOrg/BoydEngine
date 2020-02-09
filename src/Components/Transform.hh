@@ -10,6 +10,7 @@
 
 #include "../Core/Platform.hh"
 #include "../Core/Registrar.hh"
+#include "../Debug/Log.hh"
 
 namespace boyd
 {
@@ -34,9 +35,9 @@ struct Registrar<comp::Transform, TRegister>
 {
     static constexpr const char *TYPENAME = "Transform";
 
-    static comp::Transform Translated(comp::Transform *self, float x, float y, float z)
+    static comp::Transform Translated(comp::Transform *self, glm::vec3 *translationVector)
     {
-        return {glm::translate(self->matrix, glm::vec3{x, y, z})};
+        return {glm::translate(self->matrix, *translationVector)};
     }
 
     static comp::Transform Rotated(comp::Transform *self, float degrees, float axisX, float axisY, float axisZ)
@@ -44,9 +45,29 @@ struct Registrar<comp::Transform, TRegister>
         return {glm::rotate(self->matrix, glm::radians(degrees), glm::vec3{axisX, axisY, axisZ})};
     }
 
-    static comp::Transform Scaled(const comp::Transform *self, float x, float y, float z)
+    static comp::Transform Scaled(comp::Transform *self, float x, float y, float z)
     {
         return {glm::scale(self->matrix, glm::vec3{x, y, z})};
+    }
+
+    // Get the position of a vector from model space to world space
+    static glm::vec3 AbsolutePosition(comp::Transform *self, glm::vec3 *position)
+    {
+        return glm::vec3{self->matrix * glm::vec4{*position, 1.0f}};
+    }
+
+    // Get the position of a vector from world space to model space
+    static glm::vec3 RelativePosition(comp::Transform *self, glm::vec3 *position)
+    {
+        return glm::vec3{glm::inverse(self->matrix) * glm::vec4{*position, 1.0f}};
+    }
+
+    static comp::Transform MoveToRelativePosition(comp::Transform *self, glm::vec3 *position)
+    {
+        auto absolutePosition = self->matrix * glm::vec4{*position, 1.0f};
+        auto origin = self->matrix * glm::vec4{0.0f, 0.0f, 0.0f, 1.0f};
+        auto translationVector = glm::vec3{absolutePosition - origin};
+        return Translated(self, &translationVector);
     }
 
     static std::string ToString(comp::Transform *self)
@@ -62,6 +83,9 @@ struct Registrar<comp::Transform, TRegister>
             .addFunction("translated", Translated)
             .addFunction("rotated", Rotated)
             .addFunction("scaled", Scaled)
+            .addFunction("move_relatively", MoveToRelativePosition)
+            .addFunction("absolute_position", AbsolutePosition)
+            .addFunction("relative_position", RelativePosition)
             .addFunction("__tostring", ToString)
         .endClass();
         // clang-format on
