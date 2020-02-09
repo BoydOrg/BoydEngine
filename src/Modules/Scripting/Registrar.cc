@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "../../Components/AllTypes.hh"
+#include "3rdparty.hh"
 
 // NOTE: The "LuaEntity" mentioned below is a Lua table type that contains:
 // - entity: boyd::EntityId - The id of the entity
@@ -327,6 +328,7 @@ void RegisterAllLuaTypes(BoydScriptingState *state)
 
     // clang-format on
 
+    RegisterGLM(ns);
     ns.endNamespace();
 }
 
