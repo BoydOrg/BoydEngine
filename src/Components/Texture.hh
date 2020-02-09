@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Core/Platform.hh"
-#include <memory>
+#include "../Core/Versioned.hh"
 
 namespace boyd
 {
@@ -42,11 +42,11 @@ struct BOYD_API Texture
         Filter magFilter{Bilinear};
         Usage usage{Static};
     };
-    std::shared_ptr<Data> data;
+    Versioned<Data> data;
 
     /// Creates a new texture given its data.
     Texture(Data &&data)
-        : data{std::make_shared<Data>(std::move(data))}
+        : data{Versioned<Data>::Make(data)}
     {
     }
     ~Texture() = default;

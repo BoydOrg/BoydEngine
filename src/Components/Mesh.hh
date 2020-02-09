@@ -1,9 +1,9 @@
 #pragma once
 
 #include "../Core/Platform.hh"
+#include "../Core/Versioned.hh"
 #include <entt/entt.hpp>
 #include <glm/glm.hpp>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -36,7 +36,7 @@ struct BOYD_API Mesh
         std::vector<Index> indices{};
         Usage usage{Static};
     };
-    std::shared_ptr<Data> data;
+    Versioned<Data> data;
 
     // FIXME: Make so that the component must be changed to change `data`
     //       - i.e., that the user must assign_or_replace<>() it to get changes
@@ -44,7 +44,7 @@ struct BOYD_API Mesh
 
     /// Creates a new, empty mesh.
     Mesh()
-        : data{std::make_shared<Data>()}
+        : data{Versioned<Data>::Make()}
     {
     }
     ~Mesh() = default;
