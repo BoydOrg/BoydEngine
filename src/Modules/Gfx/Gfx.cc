@@ -58,44 +58,62 @@ bool BoydGfxState::InitContext()
     return true;
 }
 
-gl3::SharedTexture BoydGfxState::MapGpuTexture(const comp::Texture *texture)
+gl3::SharedTexture BoydGfxState::MapGpuTexture(const comp::Texture &texture)
 {
-    auto gpuTextureIt = textureMap.find(texture->data.get());
-    if(gpuTextureIt != textureMap.end())
+    auto gpuTextureIt = textureMap.find(texture.data);
+    bool needsUploading = false;
+    if(gpuTextureIt == textureMap.end())
     {
-        return gpuTextureIt->second;
+        // Texture is not on GPU -> Add a entry for it and mark it as to be uploaded (current version from RAM to VRAM!)
+        gpuTextureIt = textureMap.emplace(texture.data, std::make_pair(gl3::SharedTexture{0}, texture.data.Version())).first;
+        needsUploading = true;
     }
-    else
+    else if(gpuTextureIt->second.second < texture.data.Version())
     {
-        gl3::SharedTexture gpuTextureInstance{0};
-        bool uploadOk = gl3::UploadTexture(*texture, gpuTextureInstance);
+        // Texture on GPU is outdated -> Need to upload the modifications
+        needsUploading = true;
+    }
+
+    if(needsUploading)
+    {
+        bool uploadOk = gl3::UploadTexture(texture, gpuTextureIt->second.first);
         if(!uploadOk)
         {
             BOYD_LOG(Warn, "Failed to upload texture to GPU");
             return gl3::SharedTexture{0};
         }
-        return textureMap.emplace(texture->data.get(), std::move(gpuTextureInstance)).first->second;
     }
+
+    return gpuTextureIt->second.first;
 }
 
-gl3::SharedMesh BoydGfxState::MapGpuMesh(const comp::Mesh *mesh)
+gl3::SharedMesh BoydGfxState::MapGpuMesh(const comp::Mesh &mesh)
 {
-    auto gpuMeshIt = meshMap.find(mesh->data.get());
-    if(gpuMeshIt != meshMap.end())
+    auto gpuMeshIt = meshMap.find(mesh.data);
+    bool needsUploading = false;
+    if(gpuMeshIt == meshMap.end())
     {
-        return gpuMeshIt->second;
+        // Mesh is not on GPU -> Add a entry for it and mark it as to be uploaded (current version from RAM to VRAM!)
+        gpuMeshIt = meshMap.emplace(mesh.data, std::make_pair(gl3::SharedMesh{}, mesh.data.Version())).first;
+        needsUploading = true;
     }
-    else
+    else if(gpuMeshIt->second.second < mesh.data.Version())
     {
-        gl3::SharedMesh gpuMeshInstance;
-        bool uploadOk = gl3::UploadMesh(*mesh, gpuMeshInstance);
+        // Mesh on GPU is outdated -> Need to upload the modifications
+        needsUploading = true;
+    }
+
+    if(needsUploading)
+    {
+        bool uploadOk = gl3::UploadMesh(mesh, gpuMeshIt->second.first);
         if(!uploadOk)
         {
             BOYD_LOG(Warn, "Failed to upload mesh to GPU");
-            return {};
+            return gl3::SharedMesh{};
         }
-        return (meshMap[mesh->data.get()] = std::move(gpuMeshInstance));
     }
+
+    return gpuMeshIt->second.first;
 }
 
 unsigned BoydGfxState::ApplyMaterialParams(const comp::Material &material, gl3::SharedProgram &program)
@@ -135,7 +153,7 @@ unsigned BoydGfxState::ApplyMaterialParams(const comp::Material &material, gl3::
             break;
         case 6: // comp::Texture
         {
-            auto gpuTexture = MapGpuTexture(&std::get<comp::Texture>(param.second));
+            auto gpuTexture = MapGpuTexture(*std::get_if<comp::Texture>(&param.second));
             glActiveTexture(GL_TEXTURE0 + nTexturesApplied);
             glBindTexture(GL_TEXTURE_2D, gpuTexture); // TODO: support non-2D textures?
 
@@ -217,8 +235,8 @@ void BoydGfxState::Update()
 
     unsigned nTextures = 0; // Number of textures bound the previous drawcall
     gameState->ecs.view<comp::Transform, comp::Mesh, comp::Material>()
-        .each([&](auto entity, const comp::Transform &transform, comp::Mesh &mesh, comp::Material &material) {
-            const auto gpuMesh = MapGpuMesh(&mesh);
+        .each([&](auto entity, const comp::Transform &transform, const comp::Mesh &mesh, const comp::Material &material) {
+            const auto gpuMesh = MapGpuMesh(mesh);
 
             // Apply uniforms + bind the textures needed for this drawcall
             // (uploads textures to VRAM if they weren't already there)

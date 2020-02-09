@@ -42,24 +42,48 @@ static constexpr const GLenum GL_USAGE_MAP[] = {
 
 bool UploadMesh(const comp::Mesh &mesh, gl3::SharedMesh &gpuMesh)
 {
-    gpuMesh.vao = SharedVertexArray();
-    BOYD_CHECK(gpuMesh.vao != 0, "Failed to create VAO")
-
+    if(gpuMesh.vao == 0)
+    {
+        gpuMesh.vao = SharedVertexArray();
+        BOYD_CHECK(gpuMesh.vao != 0, "Failed to create VAO")
+    }
     glBindVertexArray(gpuMesh.vao);
 
-    gpuMesh.ibo = SharedBuffer(GL_ELEMENT_ARRAY_BUFFER,
-                               mesh.data->indices.size() * sizeof(comp::Mesh::Index),
-                               mesh.data->indices.data(),
-                               GL_USAGE_MAP[mesh.data->usage]);
-    BOYD_CHECK(gpuMesh.ibo != 0, "Failed to create IBO")
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpuMesh.ibo);
+    if(gpuMesh.ibo == 0)
+    {
+        gpuMesh.ibo = SharedBuffer(GL_ELEMENT_ARRAY_BUFFER,
+                                   mesh.data->indices.size() * sizeof(comp::Mesh::Index),
+                                   mesh.data->indices.data(),
+                                   GL_USAGE_MAP[mesh.data->usage]);
+        BOYD_CHECK(gpuMesh.ibo != 0, "Failed to create IBO")
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpuMesh.ibo);
+    }
+    else
+    {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpuMesh.ibo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                     mesh.data->indices.size() * sizeof(comp::Mesh::Index),
+                     mesh.data->indices.data(),
+                     GL_USAGE_MAP[mesh.data->usage]);
+    }
 
-    gpuMesh.vbo = SharedBuffer(GL_ARRAY_BUFFER,
-                               mesh.data->vertices.size() * sizeof(comp::Mesh::Vertex),
-                               mesh.data->vertices.data(),
-                               GL_USAGE_MAP[mesh.data->usage]);
-    BOYD_CHECK(gpuMesh.vbo != 0, "Failed to create VBO")
-    glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.vbo);
+    if(gpuMesh.vbo == 0)
+    {
+        gpuMesh.vbo = SharedBuffer(GL_ARRAY_BUFFER,
+                                   mesh.data->vertices.size() * sizeof(comp::Mesh::Vertex),
+                                   mesh.data->vertices.data(),
+                                   GL_USAGE_MAP[mesh.data->usage]);
+        BOYD_CHECK(gpuMesh.vbo != 0, "Failed to create VBO")
+        glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.vbo);
+    }
+    else
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.ibo);
+        glBufferData(GL_ARRAY_BUFFER,
+                     mesh.data->vertices.size() * sizeof(comp::Mesh::Vertex),
+                     mesh.data->vertices.data(),
+                     GL_USAGE_MAP[mesh.data->usage]);
+    }
 
     // Vertex attrib pointers - see the layout of `comp::Mesh::Vertex`!
 
@@ -101,9 +125,12 @@ static constexpr const GLenum GL_IMAGEFILTER_MAP[] = {
 
 bool UploadTexture(const comp::Texture &texture, gl3::SharedTexture &gpuTexture)
 {
-    gpuTexture = gl3::SharedTexture{0};
-    glGenTextures(1, gpuTexture.handle.get());
-    BOYD_CHECK(gpuTexture != 0, "Failed to create texture")
+    if(gpuTexture == 0)
+    {
+        gpuTexture = gl3::SharedTexture{0};
+        glGenTextures(1, gpuTexture.handle.get());
+        BOYD_CHECK(gpuTexture != 0, "Failed to create texture")
+    }
 
     const auto &imgFormat = GL_IMAGEFORMAT_MAP[texture.data->format];
 

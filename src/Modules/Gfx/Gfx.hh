@@ -24,13 +24,13 @@ struct BoydGfxState
     /// The whole rendering pipeline.
     std::unique_ptr<gl3::Pipeline> pipeline;
 
-    /// Maps all mesh data to its respective OpenGL mesh info.
+    /// Maps all mesh data to its respective OpenGL conterpart (= a <SharedMesh, version of Mesh::Data last stored> pair)
     /// (This is so implicit sharing for mesh data works seamlessly: 1 comp::Mesh on RAM -> 1 OpenGL mesh on VRAM)
-    std::unordered_map<comp::Mesh::Data *, gl3::SharedMesh> meshMap;
+    std::unordered_map<Versioned<comp::Mesh::Data>, std::pair<gl3::SharedMesh, unsigned>> meshMap;
 
-    /// Maps all textures to their respective OpenGL counterpart.
+    /// Maps all textures to their respective OpenGL counterpart (= a SharedTexture, version of Texture::Data last stored> pair)
     /// (This is so implicit sharing for texture data works seamlessly: 1 comp::Texture on RAM -> 1 OpenGL texture on VRAM)
-    std::unordered_map<comp::Texture::Data *, gl3::SharedTexture> textureMap;
+    std::unordered_map<Versioned<comp::Texture::Data>, std::pair<gl3::SharedTexture, unsigned>> textureMap;
 
 public:
     BoydGfxState()
@@ -73,12 +73,12 @@ private:
     bool InitContext();
 
     /// Gets the GPU texture from `textureMap` that is mapped to the given texture in RAM.
-    /// If there isn't any uploads `texture` to VRAM, then adds the pair to `textureMap` and returns the freshly-uploaded GPU texture.
-    gl3::SharedTexture MapGpuTexture(const comp::Texture *texture);
+    /// If there isn't any GPU texture on VRAM - or if it is too old - uploads the texture data to VRAM and returns the freshly-uploaded GPU texture.
+    gl3::SharedTexture MapGpuTexture(const comp::Texture &texture);
 
     /// Gets the GPU mesh from `meshMap` that is mapped to the given mesh in RAM.
-    /// If there isn't any uploads `mesh` to VRAM, then adds the pair to `meshMap` and returns the freshly-uploaded GPU mesh.
-    gl3::SharedMesh MapGpuMesh(const comp::Mesh *mesh);
+    /// If there isn't any GPU mesh on VRAM - or if it is too old - uploads the mesh data to VRAM and returns the freshly-uploaded GPU mesh.
+    gl3::SharedMesh MapGpuMesh(const comp::Mesh &mesh);
 
     /// Applies all of a material's parameters to `program`.
     /// Loads and bits textures (via `MapGpuTexture()`) as necessary.

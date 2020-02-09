@@ -88,83 +88,88 @@ struct LoadedGltfModel : public LoadedAssetBase
 private:
     bool LoadMesh(tinygltf::Mesh &gltfMesh, comp::Mesh &outMesh)
     {
-        for(size_t iPrimitive = 0; iPrimitive < gltfMesh.primitives.size(); iPrimitive++)
-        {
-            const size_t nVertsPrev = outMesh.data->vertices.size(); // = number of vertices as of the last loaded primitive
-            const size_t nIdxsPrev = outMesh.data->indices.size();   // = number of indices as of the last loaded primitive
-
-            const auto &primitive = gltfMesh.primitives[iPrimitive];
-            if(primitive.mode != TINYGLTF_MODE_TRIANGLES)
+        auto LoadMeshComponent = [&](comp::Mesh::Data *outMeshData) -> bool {
+            for(size_t iPrimitive = 0; iPrimitive < gltfMesh.primitives.size(); iPrimitive++)
             {
-                // TODO IMPLEMENT
-                BOYD_LOG(Warn, "{}: skipping non-triangular mesh primitive!", filepath);
-                continue;
-            }
+                const size_t nVertsPrev = outMeshData->vertices.size(); // = number of vertices as of the last loaded primitive
+                const size_t nIdxsPrev = outMeshData->indices.size();   // = number of indices as of the last loaded primitive
 
-            const auto &idxAccessor = gltfModel.accessors[primitive.indices];
-            const auto &idxBufferView = gltfModel.bufferViews[idxAccessor.bufferView];
-            const auto &idxBuffer = gltfModel.buffers[idxBufferView.buffer];
-
-            const size_t bytesPerIdx = tinygltf::GetComponentSizeInBytes(idxAccessor.componentType);
-            const size_t nIdxsNow = nIdxsPrev + idxAccessor.count;
-            outMesh.data->indices.resize(nIdxsNow);
-            const auto idxConv = INDEX_CONVERTERS.at(idxAccessor.componentType);
-
-            const uint8_t *readPtr = &idxBuffer.data[idxBufferView.byteOffset + idxAccessor.byteOffset];
-            for(size_t iIdx = nIdxsPrev; iIdx < nIdxsNow; iIdx++)
-            {
-                // Shift all indices by the previous primitive's vertex count to merge the two...
-                outMesh.data->indices[iIdx] = idxConv(readPtr) + nVertsPrev;
-                readPtr += bytesPerIdx;
-            }
-
-            for(const auto &attribPair : primitive.attributes)
-            {
-                // Find vertex attribute by name...
-                auto vertAttribIt = VERTEX_ATTRIBS.find(attribPair.first);
-                if(vertAttribIt == VERTEX_ATTRIBS.end())
-                {
-                    // Not an attribute we are interested in
-                    continue;
-                }
-                const VertexAttrib &vertAttrib = vertAttribIt->second;
-
-                const auto &attribAccessor = gltfModel.accessors[attribPair.second];
-                if(attribAccessor.sparse.isSparse)
+                const auto &primitive = gltfMesh.primitives[iPrimitive];
+                if(primitive.mode != TINYGLTF_MODE_TRIANGLES)
                 {
                     // TODO IMPLEMENT
-                    BOYD_LOG(Warn, "{}: sparse buffer view is not supported", filepath);
+                    BOYD_LOG(Warn, "{}: skipping non-triangular mesh primitive!", filepath);
                     continue;
                 }
 
-                // FIXME: Check that the component type == GL_FLOAT!
-                //        (it should be, but you never know...)
-                const auto gltfCompSize = static_cast<size_t>(tinygltf::GetComponentSizeInBytes(attribAccessor.componentType));
-                const auto gltfCompCount = static_cast<size_t>(tinygltf::GetNumComponentsInType(attribAccessor.type));
-                const auto gltfAttribSize = gltfCompSize * gltfCompCount;
-                if(gltfAttribSize != vertAttrib.size)
+                const auto &idxAccessor = gltfModel.accessors[primitive.indices];
+                const auto &idxBufferView = gltfModel.bufferViews[idxAccessor.bufferView];
+                const auto &idxBuffer = gltfModel.buffers[idxBufferView.buffer];
+
+                const size_t bytesPerIdx = tinygltf::GetComponentSizeInBytes(idxAccessor.componentType);
+                const size_t nIdxsNow = nIdxsPrev + idxAccessor.count;
+                outMeshData->indices.resize(nIdxsNow);
+                const auto idxConv = INDEX_CONVERTERS.at(idxAccessor.componentType);
+
+                const uint8_t *readPtr = &idxBuffer.data[idxBufferView.byteOffset + idxAccessor.byteOffset];
+                for(size_t iIdx = nIdxsPrev; iIdx < nIdxsNow; iIdx++)
                 {
-                    BOYD_LOG(Warn, "{}: GLTF attribute {}'s size is ({}x{})B, but in Mesh it's {}B - truncating!",
-                             filepath, attribPair.first, gltfCompSize, gltfCompCount, vertAttrib.size);
+                    // Shift all indices by the previous primitive's vertex count to merge the two...
+                    outMeshData->indices[iIdx] = idxConv(readPtr) + nVertsPrev;
+                    readPtr += bytesPerIdx;
                 }
-                const size_t attribSize = std::min(gltfAttribSize, vertAttrib.size);
 
-                const auto &attribBufferView = gltfModel.bufferViews[attribAccessor.bufferView];
-                const auto &attribBuffer = gltfModel.buffers[attribBufferView.buffer];
-
-                // Ensure there are enough vertices to store all attribute values for this primitive
-                outMesh.data->vertices.resize(nVertsPrev + attribAccessor.count);
-
-                const uint8_t *readPtr = &attribBuffer.data[attribBufferView.byteOffset + attribAccessor.byteOffset];
-                uint8_t *writePtr = reinterpret_cast<uint8_t *>(&outMesh.data->vertices[nVertsPrev]) + vertAttrib.offset;
-                for(size_t iVertex = 0; iVertex < attribAccessor.count; iVertex++)
+                for(const auto &attribPair : primitive.attributes)
                 {
-                    memcpy(writePtr, readPtr, attribSize);
-                    writePtr += sizeof(comp::Mesh::Vertex);
-                    readPtr += gltfAttribSize;
+                    // Find vertex attribute by name...
+                    auto vertAttribIt = VERTEX_ATTRIBS.find(attribPair.first);
+                    if(vertAttribIt == VERTEX_ATTRIBS.end())
+                    {
+                        // Not an attribute we are interested in
+                        continue;
+                    }
+                    const VertexAttrib &vertAttrib = vertAttribIt->second;
+
+                    const auto &attribAccessor = gltfModel.accessors[attribPair.second];
+                    if(attribAccessor.sparse.isSparse)
+                    {
+                        // TODO IMPLEMENT
+                        BOYD_LOG(Warn, "{}: sparse buffer view is not supported", filepath);
+                        continue;
+                    }
+
+                    // FIXME: Check that the component type == GL_FLOAT!
+                    //        (it should be, but you never know...)
+                    const auto gltfCompSize = static_cast<size_t>(tinygltf::GetComponentSizeInBytes(attribAccessor.componentType));
+                    const auto gltfCompCount = static_cast<size_t>(tinygltf::GetNumComponentsInType(attribAccessor.type));
+                    const auto gltfAttribSize = gltfCompSize * gltfCompCount;
+                    if(gltfAttribSize != vertAttrib.size)
+                    {
+                        BOYD_LOG(Warn, "{}: GLTF attribute {}'s size is ({}x{})B, but in Mesh it's {}B - truncating!",
+                                 filepath, attribPair.first, gltfCompSize, gltfCompCount, vertAttrib.size);
+                    }
+                    const size_t attribSize = std::min(gltfAttribSize, vertAttrib.size);
+
+                    const auto &attribBufferView = gltfModel.bufferViews[attribAccessor.bufferView];
+                    const auto &attribBuffer = gltfModel.buffers[attribBufferView.buffer];
+
+                    // Ensure there are enough vertices to store all attribute values for this primitive
+                    outMeshData->vertices.resize(nVertsPrev + attribAccessor.count);
+
+                    const uint8_t *readPtr = &attribBuffer.data[attribBufferView.byteOffset + attribAccessor.byteOffset];
+                    uint8_t *writePtr = reinterpret_cast<uint8_t *>(&outMeshData->vertices[nVertsPrev]) + vertAttrib.offset;
+                    for(size_t iVertex = 0; iVertex < attribAccessor.count; iVertex++)
+                    {
+                        memcpy(writePtr, readPtr, attribSize);
+                        writePtr += sizeof(comp::Mesh::Vertex);
+                        readPtr += gltfAttribSize;
+                    }
                 }
             }
-        }
+
+            return true; // comp::Mesh::Data was edited
+        };
+        outMesh.data.Edit(LoadMeshComponent);
 
         return true;
     }
