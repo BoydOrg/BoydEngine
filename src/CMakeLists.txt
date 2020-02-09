@@ -17,8 +17,18 @@ target_compile_definitions(BoydEngine PRIVATE
     -DBOYD_DLL_EXPORTS
 )
 
-# Need std::thread...
-find_package(Threads REQUIRED)
+if(NOT EMSCRIPTEN)
+    # Need std::thread...
+    find_package(Threads REQUIRED)
+    add_library(BoydThreads INTERFACE)
+    target_link_libraries(BoydThreads INTERFACE ${CMAKE_THREAD_LIBS_INIT})
+else()
+    add_library(BoydThreads INTERFACE)
+    option(BOYD_EMSCRIPTEN_PTHREADS "Enable Emscripten PThreads support?" OFF)
+    if(BOYD_EMSCRIPTEN_PTHREADS)
+        target_compile_options(BoydThreads INTERFACE "SHELL:-s USE_PTHREADS=1")
+    endif()
+endif()
 
 add_subdirectory(3rdparty/)
 
@@ -27,7 +37,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     fmt::fmt
     glm
     polyvox
-    ${CMAKE_THREAD_LIBS_INIT}
+    BoydThreads
 )
 if(UNIX AND NOT APPLE)
     # Required by Dll.hh

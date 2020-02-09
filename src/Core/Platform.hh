@@ -45,6 +45,7 @@ __declspec(dllimport) void __stdcall DebugBreak();
 #        define BOYD_DEBUGGER_TRAP()
 #   endif
 #elif defined(BOYD_PLATFORM_EMSCRIPTEN)
+#    include <emscripten.h>
 #    define BOYD_DEBUGGER_TRAP() EM_ASM(debugger;)
 #else
 #    define BOYD_DEBUGGER_TRAP()

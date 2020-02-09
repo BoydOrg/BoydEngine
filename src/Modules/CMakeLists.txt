@@ -54,9 +54,10 @@ macro(boyd_module)
     ) 
     target_link_libraries(${_BOYD_MODULE_NAME} PUBLIC
         ${_BOYD_MODULE_LINKS}
-	    # Header-only libs that are needed by all modules (and are safe to link to)
-	    EnTT::EnTT
-	    fmt::fmt
+        # [Header-only] libs that are needed by all modules (and are safe to link to)
+        EnTT::EnTT
+        fmt::fmt
+        BoydThreads
     )
 
     if (BOYD_HOT_RELOADING)
