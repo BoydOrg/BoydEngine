@@ -1,4 +1,6 @@
 #include "3rdparty.hh"
+
+#include "../../Debug/Log.hh"
 #include <functional>
 
 #include <glm/glm.hpp>
@@ -23,24 +25,39 @@ glm::vec3 back{0.0f, 0.0f, 1.0f};
 
 /// A hack to get LuaBridge to work
 template <typename T>
-T getZeroVector() { return T{}; }
+T GetZeroVector() { return T{}; }
+
+/// HACK(Enrico): Define the cross product for all the vectors, and return the
+/// zero vector in all cases but vec3.
+template <typename T>
+T GetCross(const T *v1, const T *v2) { return T{}; }
+
+template <>
+vec3 GetCross(const vec3 *v1, const vec3 *v2)
+{
+    return cross(*v1, *v2);
+}
 
 void RegisterGLM(luabridge::Namespace &ns)
 {
     ns = ns.beginNamespace("Utils");
 
     // clang-format off
+             //.
+
 #define REGISTER_VEC(T, constructor)                                                                                               \
     ns = ns.beginClass<T>(#T)                                                                                                      \
              .addConstructor<void(*) constructor>()                                                                                \
-             .addFunction("__index", std::function<float(const T *, int i)>([](const T *vec, int i) { return (*vec)[i]; }))        \
+             .addFunction("cross", GetCross<T>)                                                                                    \
+             .addFunction("normalize", std::function<T(const T *)> ([](const T* v) {return normalize(*v);}))                       \
              .addFunction("__add", std::function<T(const T *, const T *)>([](const T *a, const T *b) { return *a + *b; }))         \
              .addFunction("__sub", std::function<T(const T *, const T *)>([](const T *a, const T *b) { return *a - *b; }))         \
              .addFunction("__unm", std::function<T(const T *)>([](const T *a) { return -*a; }))                                    \
              .addFunction("__mul", std::function<float(const T *, const T *)>([](const T *a, const T *b) { return dot(*a, *b); })) \
              .addFunction("__mul", std::function<T(const T *, float k)>([](const T *v, float k) { return k * (*v); }))             \
              .addFunction("__tostring", std::function<std::string(const T *)>([](const T *a) { return glm::to_string(*a); }))      \
-             .addStaticProperty("zero", getZeroVector<T>) \
+             .addFunction("__index", std::function<float(const T *, int i)>([](const T *vec, int i) { return (*vec)[i]; }))        \
+             .addStaticProperty("zero", GetZeroVector<T>)                                                                          \
         .endClass()
     // clang-format on
 

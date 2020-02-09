@@ -62,12 +62,9 @@ struct Registrar<comp::Transform, TRegister>
         return glm::vec3{glm::inverse(self->matrix) * glm::vec4{*position, 1.0f}};
     }
 
-    static comp::Transform MoveToRelativePosition(comp::Transform *self, glm::vec3 *position)
+    static comp::Transform LookAt(comp::Transform *self, glm::vec3 *position, glm::vec3 *target, glm::vec3 *up)
     {
-        auto absolutePosition = self->matrix * glm::vec4{*position, 1.0f};
-        auto origin = self->matrix * glm::vec4{0.0f, 0.0f, 0.0f, 1.0f};
-        auto translationVector = glm::vec3{absolutePosition - origin};
-        return Translated(self, &translationVector);
+        return {glm::lookAt(*position, *target, *up)};
     }
 
     static std::string ToString(comp::Transform *self)
@@ -83,9 +80,9 @@ struct Registrar<comp::Transform, TRegister>
             .addFunction("translated", Translated)
             .addFunction("rotated", Rotated)
             .addFunction("scaled", Scaled)
-            .addFunction("move_relatively", MoveToRelativePosition)
             .addFunction("absolute_position", AbsolutePosition)
             .addFunction("relative_position", RelativePosition)
+            .addFunction("look_at", LookAt)
             .addFunction("__tostring", ToString)
         .endClass();
         // clang-format on
