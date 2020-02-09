@@ -63,3 +63,13 @@ add_subdirectory(Modules/)
 
 # Then configure BoydEngine.hh via CMake
 configure_file(BoydEngine.hh.in BoydEngine.hh)
+
+if(EMSCRIPTEN)
+    # SMALL_XHR_CHINKS: See https://github.com/emscripten-core/emscripten/blob/b82e1d81698a2379f989a4aefc1cd107e00cfdf8/src/library_fs.js#L1734
+    target_link_options(BoydEngine PUBLIC
+    	"SHELL:-s SMALL_XHR_CHUNKS=1"
+	"SHELL:-s WASM=1"
+	--pre-js "${PROJECT_SOURCE_DIR}/emscripten/pre.js"
+    )
+endif()
+
