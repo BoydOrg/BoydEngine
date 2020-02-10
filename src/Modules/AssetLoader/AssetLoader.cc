@@ -182,10 +182,10 @@ public:
         auto loadedAsset = it->second(fullFilepath);
         if(!loadedAsset)
         {
-            BOYD_LOG(Error, "Error loading {} (component typeId={:X})", job.filepath, job.typeId);
+            BOYD_LOG(Error, "Error loading {} (component typeId={:X})", fullFilepath, job.typeId);
             return Error;
         }
-        BOYD_LOG(Debug, "Loaded {} for entity={}, typeId={:X}", job.filepath, job.target, job.typeId);
+        BOYD_LOG(Debug, "Loaded {} for entity={}, typeId={:X}", fullFilepath, job.target, job.typeId);
 
         // ...and finally post the results to the main thread
         {

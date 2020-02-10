@@ -80,7 +80,7 @@ if(EMSCRIPTEN)
         CACHE STRING
         "Paths to all assets (files/dirs) to bundle in BoydEngine.data when compiling for Emscripten.\nFormat: <dir1>@<mountpoint1>;<dir2>@<mountpoint2>;..."
     )
-    em_preload_files(BoydEngine ${BOYD_EMSCRIPTEN_PRELOADS})
+    em_preload_files(BoydEngine "BoydEngine" ${BOYD_EMSCRIPTEN_PRELOADS})
 
     target_link_options(BoydEngine PUBLIC
     	"SHELL:-s SMALL_XHR_CHUNKS=1"

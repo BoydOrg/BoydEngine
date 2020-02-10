@@ -1,7 +1,7 @@
 # Select the files to --preload to create a data package for emscripten.
-# TARGET is the executable target.
+# TARGET is the executable target. FILENAME is the base name of the output files.
 # Pass each filepath to preload, in `<realpath>@<emscrpath>` format.
-function(em_preload_files TARGET DATAFILE)
+function(em_preload_files TARGET FILENAME)
     # See Emscripten/Modules/Platform/Emscripten.cmake
     set(PRELOAD_ARGS "")
     foreach(PRELOAD ${ARGN})
@@ -9,9 +9,8 @@ function(em_preload_files TARGET DATAFILE)
     endforeach()
 
     get_target_property(OUT_DIR ${TARGET} RUNTIME_OUTPUT_DIRECTORY)
-    get_target_property(OUT_NAME ${TARGET} OUTPUT_NAME)
-    set(OUT_DATA_PATH "${OUT_DIR}/${OUT_NAME}.data")
-    set(OUT_JS_PATH "${OUT_DIR}/${OUT_NAME}.preload.js")
+    set(OUT_DATA_PATH "${OUT_DIR}/${FILENAME}.data")
+    set(OUT_JS_PATH "${OUT_DIR}/${FILENAME}.preload.js")
 
     # TODO: Only execute this if the files/folders to preload change...
     add_custom_command(
