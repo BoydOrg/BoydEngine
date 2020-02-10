@@ -25,6 +25,7 @@ if(NOT EMSCRIPTEN)
 else()
     add_library(BoydThreads INTERFACE)
     option(BOYD_EMSCRIPTEN_PTHREADS "Enable Emscripten PThreads support?" OFF)
+    # NOTE: Configuration copied in BoydEngine link settings below!
     if(BOYD_EMSCRIPTEN_PTHREADS)
         target_compile_options(BoydThreads INTERFACE "SHELL:-s USE_PTHREADS=1")
     endif()
@@ -76,10 +77,28 @@ configure_file(BoydEngine.hh.in BoydEngine.hh)
 
 if(EMSCRIPTEN)
     # SMALL_XHR_CHINKS: See https://github.com/emscripten-core/emscripten/blob/b82e1d81698a2379f989a4aefc1cd107e00cfdf8/src/library_fs.js#L1734
+    set(BOYD_EMSCRIPTEN_PRELOADS "assets@/assets;scripts@/scripts;"
+        CACHE STRING
+        "Paths to all assets (files/dirs) to bundle in BoydEngine.data when compiling for Emscripten.\nFormat: <dir1>@<mountpoint1>;<dir2>@<mountpoint2>;..."
+    )
+    foreach(ASSET ${BOYD_EMSCRIPTEN_PRELOADS})
+        target_link_options(BoydEngine PUBLIC
+            "SHELL:--preload-file ${ASSET}"
+        )
+    endforeach()
+
     target_link_options(BoydEngine PUBLIC
     	"SHELL:-s SMALL_XHR_CHUNKS=1"
-	"SHELL:-s WASM=1"
-	--pre-js "${PROJECT_SOURCE_DIR}/emscripten/pre.js"
+	    "SHELL:-s WASM=1"
+        --pre-js "${PROJECT_SOURCE_DIR}/emscripten/pre.js"
+    )
+    if(BOYD_EMSCRIPTEN_PTHREADS)
+        target_link_options(BoydEngine PUBLIC "SHELL:-s USE_PTHREADS=1")
+    endif()
+
+    set_target_properties(BoydEngine PROPERTIES
+        # Make Emscripten generate the startup page
+        SUFFIX ".html"
     )
 endif()
 
