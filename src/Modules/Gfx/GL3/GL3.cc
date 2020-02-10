@@ -151,8 +151,12 @@ bool UploadTexture(const comp::Texture &texture, gl3::SharedTexture &gpuTexture)
                  imgFormat.dtype,
                  texture.data->pixels.data());
 
-    glTexParameteri(gpuTexture, GL_TEXTURE_MIN_FILTER, GL_IMAGEFILTER_MAP[texture.data->minfilter]);
-    glTexParameteri(gpuTexture, GL_TEXTURE_MAG_FILTER, GL_IMAGEFILTER_MAP[texture.data->magFilter]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_IMAGEFILTER_MAP[texture.data->minFilter]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_IMAGEFILTER_MAP[texture.data->magFilter]);
+    if(texture.data->minFilter == comp::Texture::Trilinear || texture.data->minFilter == comp::Texture::Anisotropic)
+    {
+        glGenerateMipmap(gpuTexture);
+    }
 
     glBindTexture(GL_TEXTURE_2D, 0);
     return true;
