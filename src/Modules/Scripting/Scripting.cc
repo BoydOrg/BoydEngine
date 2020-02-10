@@ -21,12 +21,81 @@ static constexpr const char *UPDATE_FUNC_NAME = "update";
 /// The name of the update function defined in the script; it is executed when the scripting module is halted.
 static constexpr const char *HALT_FUNC_NAME = "halt";
 
+/// LuaCFunction replacement for the builtin "print()" - logs to BOYD_LOG instead
+/// Lua args:
+/// - string*
+/// Lua returns:
+/// - (none)
+static int LuaPrint(lua_State *L)
+{
+    static constexpr const char *TAB = "\t";
+    static constexpr const char *NUL = "\0";
+
+    int argc = lua_gettop(L);
+
+    // First, convert all Lua arguments to a string
+    static thread_local fmt::basic_memory_buffer<char, 512> buffer;
+    buffer.clear();
+    for(int i = 1; i <= argc; i++)
+    {
+        size_t argStrLen = 0;
+        const char *argStr = luaL_tolstring(L, i, &argStrLen);
+        buffer.append(argStr, argStr + argStrLen);
+        // NOTE: Lua's `print()` uses tabs inbetween each argument!
+        if(i < (argc - 1))
+        {
+            buffer.append(TAB, TAB + 1);
+        }
+    }
+    buffer.append(NUL, NUL + 1);
+
+    // Then, get which file and line the Lua script is printing from
+    lua_Debug dbg;
+    lua_getstack(L, 1, &dbg);
+    lua_getinfo(L, "Sl", &dbg); // Fill specific fields in `dbg` - see Lua docs
+
+    // Finally, log the message
+    boyd::Log::instance().log(LogLevel::Debug, dbg.short_src, dbg.currentline,
+                              FMT_STRING("{}"), buffer.data());
+
+    return 0;
+}
+
 BoydScriptingState::BoydScriptingState()
     : L{nullptr}, compRefFactory{}
 {
     BOYD_LOG(Debug, "Starting {}", LUA_RELEASE);
     L = luaL_newstate();
-    luaL_openlibs(L);
+
+    // Cherry-pick Lua libraries to open (excluding dangerous ones)
+    // (See: linit.c)
+    static constexpr const luaL_Reg LUA_LIBS[] = {
+        {LUA_GNAME, luaopen_base},
+        {LUA_LOADLIBNAME, luaopen_package},
+        {LUA_COLIBNAME, luaopen_coroutine},
+        {LUA_TABLIBNAME, luaopen_table},
+        //{LUA_IOLIBNAME, luaopen_io},
+        //{LUA_OSLIBNAME, luaopen_os},
+        {LUA_STRLIBNAME, luaopen_string},
+        {LUA_MATHLIBNAME, luaopen_math},
+        {LUA_UTF8LIBNAME, luaopen_utf8},
+        //{LUA_DBLIBNAME, luaopen_debug},
+        {nullptr, nullptr},
+    };
+    for(auto *luaLib = LUA_LIBS; luaLib->name; luaLib++)
+    {
+        luaL_requiref(L, luaLib->name, luaLib->func, 1);
+        lua_pop(L, 1);
+    }
+
+    // Replace Lua's `print()` with a custom one
+    static constexpr const luaL_Reg LUA_PRINT_LIB[] = {
+        {"print", LuaPrint},
+        {nullptr, nullptr},
+    };
+    lua_getglobal(L, "_G");
+    luaL_setfuncs(L, LUA_PRINT_LIB, 0);
+    lua_pop(L, 1);
 
     BOYD_LOG(Debug, "Registering Lua bindings");
     boyd::RegisterAllLuaTypes(this);

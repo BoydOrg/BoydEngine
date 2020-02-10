@@ -2,6 +2,7 @@
 #include <memory>
 
 #include "BoydEngine.hh"
+#include "Components/Voxels.hh"
 #include "Core/GameState.hh"
 #include "Core/SceneManager.hh"
 #include "Debug/Log.hh"
@@ -66,6 +67,10 @@ int main(void)
 #endif
     // Force all modules to be unloaded before the GameState singleton is destroyed.
     // Important to prevent crashes on exit!
+    modules.clear();
+
+    // Force all modules to be unloaded before the GameState singleton is destroyed.
+    // Important to prevent crashes!
     modules.clear();
 
     return 0;
