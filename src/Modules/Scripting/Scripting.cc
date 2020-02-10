@@ -4,13 +4,15 @@
 #include "../../Debug/Log.hh"
 #include "Registrar.hh"
 
+#include <BoydEngine.hh>
+
 // TODO: Serialize VM state to disk on halt / reload on init?
 
 namespace boyd
 {
 
 /// The path to the main script, to be execute automatically as the scripting module is started
-static constexpr const char *MAIN_SCRIPT = "scripts/main.lua";
+static constexpr const char *MAIN_SCRIPT = BOYD_FS_PREFIX "scripts/main.lua";
 
 /// The name of the update function defined in the script; it is executed every update of the scripting module.
 static constexpr const char *UPDATE_FUNC_NAME = "update";

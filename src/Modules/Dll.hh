@@ -28,9 +28,43 @@ namespace boyd
 struct BoydModule
 {
     std::string modname;
-    void *(*InitFunc)(void){nullptr};
-    void (*UpdateFunc)(void *){nullptr};
-    void (*HaltFunc)(void *){nullptr};
+    int priority;
+    void *(*InitFunc)(void);
+    void (*UpdateFunc)(void *);
+    void (*HaltFunc)(void *);
+    void *data;
+
+    BoydModule(std::string modname,
+               decltype(InitFunc) init, decltype(UpdateFunc) update, decltype(HaltFunc) halt,
+               void *data, int priority)
+        : modname{modname}, priority{priority}, InitFunc{init}, UpdateFunc{update}, HaltFunc{halt}, data{data}
+    {
+    }
+
+    BoydModule(const BoydModule &toCopy) = delete;
+    BoydModule &operator=(const BoydModule &toCopy) = delete;
+
+    BoydModule(BoydModule &&toMove)
+    {
+        *this = std::move(toMove);
+    }
+    BoydModule &operator=(BoydModule &&toMove)
+    {
+        this->modname = std::move(toMove.modname);
+        this->data = toMove.data;
+        this->priority = toMove.priority;
+        this->InitFunc = toMove.InitFunc;
+        this->UpdateFunc = toMove.UpdateFunc;
+        this->HaltFunc = toMove.HaltFunc;
+
+        // invalidate handle and function pointers
+        toMove.data = nullptr;
+        toMove.InitFunc = nullptr;
+        toMove.UpdateFunc = nullptr;
+        toMove.HaltFunc = nullptr;
+
+        return *this;
+    }
 
     ~BoydModule()
     {
@@ -42,8 +76,6 @@ struct BoydModule
         UpdateFunc = nullptr;
         HaltFunc = nullptr;
     }
-    void *data{nullptr};
-    int priority{0};
 
     void Update()
     {
@@ -113,7 +145,7 @@ public:
     /// Note: this wrapper strictly forbids copy constructors.
     const std::filesystem::path filepath;
     Dll(std::string modname, int priority)
-        : filepath{GetModulePath(modname)}
+        : BoydModule{modname, nullptr, nullptr, nullptr, nullptr, priority}, filepath{GetModulePath(modname)}
     {
         BOYD_LOG(Info, "Loading module {}", modname);
 
@@ -134,27 +166,17 @@ public:
     Dll &operator=(const Dll &toCopy) = delete;
 
     Dll(Dll &&toMove)
+        : BoydModule({}, nullptr, nullptr, nullptr, nullptr, -1)
     {
         *this = std::move(toMove);
     }
-
     Dll &operator=(Dll &&toMove)
     {
+        (void)BoydModule::operator=(std::move(toMove));
         this->handle = toMove.handle;
-        this->data = toMove.data;
-        this->InitFunc = toMove.InitFunc;
         this->initFuncName = toMove.initFuncName;
-        this->UpdateFunc = toMove.UpdateFunc;
         this->updateFuncName = toMove.updateFuncName;
-        this->HaltFunc = toMove.HaltFunc;
         this->haltFuncName = toMove.haltFuncName;
-
-        // invalidate handle and function pointers
-        toMove.handle = nullptr;
-        toMove.data = nullptr;
-        toMove.InitFunc = nullptr;
-        toMove.UpdateFunc = nullptr;
-        toMove.HaltFunc = nullptr;
 
         return *this;
     }

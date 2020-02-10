@@ -72,9 +72,6 @@ set(BOYD_MODULES "" PARENT_SCOPE)
 set(BOYD_MODULES_MACRO "" PARENT_SCOPE)
 add_subdirectory(Modules/)
 
-# Then configure BoydEngine.hh via CMake
-configure_file(BoydEngine.hh.in BoydEngine.hh)
-
 if(EMSCRIPTEN)
     # SMALL_XHR_CHINKS: See https://github.com/emscripten-core/emscripten/blob/b82e1d81698a2379f989a4aefc1cd107e00cfdf8/src/library_fs.js#L1734
     set(BOYD_EMSCRIPTEN_PRELOADS "assets@/assets;scripts@/scripts;"
@@ -100,5 +97,13 @@ if(EMSCRIPTEN)
         # Make Emscripten generate the startup page
         SUFFIX ".html"
     )
+
+    # The Emscripten filesystem is mounted at /
+    set(BOYD_FS_PREFIX "/")
+else()
+    # On most platforms assets are directly in the binary dir
+    set(BOYD_FS_PREFIX "")
 endif()
 
+# Finally, configure BoydEngine.hh via CMake
+configure_file(BoydEngine.hh.in BoydEngine.hh)

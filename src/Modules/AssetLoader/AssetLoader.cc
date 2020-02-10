@@ -6,12 +6,20 @@
 #include "Loader.hh"
 #include "Loaders/AllLoaders.hh"
 
+#include <BoydEngine.hh>
+
 #include <atomic>
 #include <condition_variable>
 #include <deque>
 #include <memory>
 #include <mutex>
 #include <thread>
+
+#ifdef BOYD_PLATFORM_EMSCRIPTEN
+//   FIXME: This is here temporarily to prevent shared memory security restrictions on WebWorkers
+//          -> disables pthread completely and just relies on Update() to load assets
+#    define BOYD_SINGLE_THREADED
+#endif
 
 namespace boyd
 {
@@ -72,8 +80,10 @@ public:
 
         hasJobs = false;
         running = true;
+#ifndef BOYD_SINGLE_THREADED
         workerThread = std::thread(&BoydAssetLoaderState::WorkerLoop, this);
         BOYD_LOG(Debug, "Asset loading thread started");
+#endif
     }
 
     ~BoydAssetLoaderState()
@@ -82,9 +92,11 @@ public:
 
         hasJobs = true; // Fake having a new job to awake the worker thread from its `wait()`
         running = false;
+#ifndef BOYD_SINGLE_THREADED
         jobsCondVar.notify_one();
         workerThread.join();
         BOYD_LOG(Debug, "Asset loading thread stopped");
+#endif
     }
 
     /// Adds new jobs for the loader thread to load depending on a `LoadRequest`.
@@ -122,13 +134,19 @@ public:
         return nApplied;
     }
 
-private:
-    void WorkerLoop()
+    enum State
     {
-        while(running)
+        Ok,
+        Error,
+        Terminate,
+    };
+
+    State DoOne(bool wait)
+    {
+        // Pop a job from the queue (waiting for one if there isn't any)...
+        LoadJob job;
         {
-            // Pop a job from the queue (waiting for one if there isn't any)...
-            LoadJob job;
+            if(wait)
             {
                 std::unique_lock<std::mutex> lock{jobsMutex};
                 jobsCondVar.wait(lock, [this]() {
@@ -136,39 +154,57 @@ private:
                 });
                 if(!running)
                 {
-                    break;
-                }
-                job = jobs.front();
-                jobs.pop_front();
-                if(jobs.empty())
-                {
-                    hasJobs = false;
+                    return Terminate;
                 }
             }
+            else if(jobs.empty())
+            {
+                return Error;
+            }
+            job = jobs.front();
+            jobs.pop_front();
+            if(jobs.empty())
+            {
+                hasJobs = false;
+            }
+        }
 
-            // ...then execute it...
-            auto it = loaders.find(job.typeId);
-            if(it == loaders.end())
-            {
-                BOYD_LOG(Error, "Can't load {}: Loader for typeId={} not found!", job.filepath, job.typeId);
-                continue;
-            }
-            auto loadedAsset = it->second(job.filepath);
-            if(!loadedAsset)
-            {
-                BOYD_LOG(Error, "Error loading {} (component typeId={})", job.filepath, job.typeId);
-                continue;
-            }
-            BOYD_LOG(Debug, "Loaded {} for entity={}, typeId={}", job.filepath, job.target, job.typeId);
+        // ...then execute it...
+        auto it = loaders.find(job.typeId);
+        if(it == loaders.end())
+        {
+            BOYD_LOG(Error, "Can't load {}: Loader for typeId={:X} not found!", job.filepath, job.typeId);
+            return Error;
+        }
 
-            // ...and finally post the results to the main thread
-            {
-                std::unique_lock<std::mutex> lock{loadedAssetsMutex};
-                loadedAssets.emplace_back(job.target, std::move(loadedAsset));
-            }
+        std::string fullFilepath{BOYD_FS_PREFIX};
+        fullFilepath += job.filepath;
+        auto loadedAsset = it->second(fullFilepath);
+        if(!loadedAsset)
+        {
+            BOYD_LOG(Error, "Error loading {} (component typeId={:X})", job.filepath, job.typeId);
+            return Error;
+        }
+        BOYD_LOG(Debug, "Loaded {} for entity={}, typeId={:X}", job.filepath, job.target, job.typeId);
+
+        // ...and finally post the results to the main thread
+        {
+            std::unique_lock<std::mutex> lock{loadedAssetsMutex};
+            loadedAssets.emplace_back(job.target, std::move(loadedAsset));
+        }
+        return Ok;
+    }
+
+private:
+    void WorkerLoop()
+    {
+        while(running)
+        {
+            DoOne(true);
         }
     }
 };
+
 } // namespace boyd
 
 inline static boyd::BoydAssetLoaderState *GetState(void *state)
@@ -197,6 +233,11 @@ BOYD_API void BoydUpdate_AssetLoader(void *statePtr)
         state->AddJobs(entity, loadReq);
         gameState->ecs.remove<boyd::comp::ComponentLoadRequest>(entity);
     });
+
+#ifndef BOYD_HOT_RELOADING
+    // If no hot
+    state->DoOne(false);
+#endif
 
     // Then, for each asset that was loaded, attach it to the right entity in the ECS
     state->AttachLoadedAssets(gameState->ecs);
