@@ -18,7 +18,7 @@ if(BOYD_LUA STREQUAL "Lua")
         set(LUA_PLATFORM -DLUA_WIN)
     elseif(UNIX AND APPLE)
         target_compile_definitions(Lua PUBLIC -DLUA_USE_MACOSX)
-    elseif(UNIX)
+    elseif(NOT EMSCRIPTEN)
         # Assume Linux...
         target_compile_definitions(Lua PUBLIC -DLUA_USE_LINUX)
         target_link_libraries(Lua PUBLIC m dl readline)

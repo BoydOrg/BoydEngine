@@ -8,6 +8,12 @@
 #include "../Core/Platform.hh"
 #include "BoydBuildConfig.hh"
 
+#ifdef BOYD_PLATFORM_WIN32
+extern "C" {
+__declspec(dllimport) void __stdcall OutputDebugStringA(const char *lpMessage);
+}
+#endif
+
 namespace boyd
 {
 
@@ -61,7 +67,12 @@ public:
         buffer.push_back('\n');
 
         // TODO: Ability to register/deregister log streams as needed
+#ifndef BOYD_PLATFORM_WIN32
         std::clog.write(buffer.data(), buffer.size());
+#else
+        buffer.push_back('\0');
+        OutputDebugStringA(buffer.data());
+#endif
     }
 };
 

@@ -49,11 +49,14 @@ bool BoydGfxState::InitContext()
     glfwMakeContextCurrent(window);
 
     BOYD_LOG(Debug, "OpenGL: {} ({})", glGetString(GL_VERSION), glGetString(GL_VENDOR));
+
+#ifdef BOYD_GLES3_FLEXTGL
     if(!flextInit(window))
     {
         BOYD_LOG(Error, "flextGL failed!");
         return false;
     }
+#endif
 
     return true;
 }
@@ -186,81 +189,86 @@ void BoydGfxState::Update()
 
     // TODO: Need a way to actually pick what camera to use - find the camera tagged "MainCamera"?
     auto cameraView = gameState->ecs.view<comp::Camera, comp::ActiveCamera>();
-    if(cameraView.empty())
-    {
-        // Hard to render anything without a camera...
-        return;
-    }
-    auto cameraEntity = *cameraView.begin();
-    const auto &camera = gameState->ecs.get<comp::Camera>(cameraEntity);
 
-    glm::mat4 projMtx;
-    switch(camera.mode)
+    entt::entity cameraEntity = entt::null;
+    glm::mat4 projMtx, viewMtx;
+
+    if(!cameraView.empty())
     {
-    case comp::Camera::Persp:
-        projMtx = glm::perspectiveFov(camera.fov, screenSize.x, screenSize.y, camera.zNear, camera.zFar);
-        break;
-    default: // comp::Camera::Ortho
-        if(glm::isinf(camera.zNear) || glm::isinf(camera.zFar))
+        cameraEntity = *cameraView.begin();
+        const auto &camera = gameState->ecs.get<comp::Camera>(cameraEntity);
+
+        switch(camera.mode)
         {
-            projMtx = glm::ortho(camera.left, camera.right, camera.bottom, camera.top);
+        case comp::Camera::Persp:
+            projMtx = glm::perspectiveFov(camera.fov, screenSize.x, screenSize.y, camera.zNear, camera.zFar);
+            break;
+        default: // comp::Camera::Ortho
+            if(glm::isinf(camera.zNear) || glm::isinf(camera.zFar))
+            {
+                projMtx = glm::ortho(camera.left, camera.right, camera.bottom, camera.top);
+            }
+            else
+            {
+                projMtx = glm::ortho(camera.left, camera.right, camera.bottom, camera.top, camera.zNear, camera.zFar);
+            }
+            break;
         }
-        else
+
+        viewMtx = glm::identity<glm::mat4>();
+        if(gameState->ecs.has<comp::Transform>(cameraEntity))
         {
-            projMtx = glm::ortho(camera.left, camera.right, camera.bottom, camera.top, camera.zNear, camera.zFar);
+            viewMtx = gameState->ecs.get<comp::Transform>(cameraEntity).matrix;
+            viewMtx = glm::inverse(viewMtx); // Inverse, because this is a camera view matrix!
         }
-        break;
     }
-
-    glm::mat4 viewMtx = glm::identity<glm::mat4>();
-    if(gameState->ecs.has<comp::Transform>(cameraEntity))
-    {
-        viewMtx = gameState->ecs.get<comp::Transform>(cameraEntity).matrix;
-        viewMtx = glm::inverse(viewMtx); // Inverse, because this is a camera view matrix!
-    }
-
-    glm::mat4 viewProjectionMtx = projMtx * viewMtx;
 
     glfwMakeContextCurrent(window);
     glViewport(0, 0, screenW, screenH);
 
-    // -----------------------------------------------------------------------------------------------------------------
-    // Forward pass: render all meshes in the ECS with forward lighting
-    // -----------------------------------------------------------------------------------------------------------------
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
-    auto &stage = pipeline->stages[gl3::Pipeline::Forward];
+    if(gameState->ecs.valid(cameraEntity))
+    {
+        glm::mat4 viewProjectionMtx = projMtx * viewMtx;
 
-    glUseProgram(stage.program);
+        // -------------------------------------------------------------------------------------------------------------
+        // Forward pass: render all meshes in the ECS with forward lighting
+        // -------------------------------------------------------------------------------------------------------------
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+        auto &stage = pipeline->stages[gl3::Pipeline::Forward];
 
-    unsigned nTextures = 0; // Number of textures bound the previous drawcall
-    gameState->ecs.view<comp::Transform, comp::Mesh, comp::Material>()
-        .each([&](auto entity, const comp::Transform &transform, const comp::Mesh &mesh, const comp::Material &material) {
-            const auto gpuMesh = MapGpuMesh(mesh);
+        glUseProgram(stage.program);
 
-            // Apply uniforms + bind the textures needed for this drawcall
-            // (uploads textures to VRAM if they weren't already there)
-            unsigned nTexturesNow = ApplyMaterialParams(material, stage.program);
+        unsigned nTextures = 0; // Number of textures bound the previous drawcall
+        gameState->ecs.view<comp::Transform, comp::Mesh, comp::Material>()
+            .each([&](auto entity, const comp::Transform &transform, const comp::Mesh &mesh, const comp::Material &material) {
+                const auto gpuMesh = MapGpuMesh(mesh);
 
-            glm::mat4 mvpMtx = viewProjectionMtx * transform.matrix;
-            glUniformMatrix4fv(stage.program.uniforms["u_ModelViewProjection"], 1, false, &mvpMtx[0][0]);
+                // Apply uniforms + bind the textures needed for this drawcall
+                // (uploads textures to VRAM if they weren't already there)
+                unsigned nTexturesNow = ApplyMaterialParams(material, stage.program);
 
-            // Unbind all textures that would be unused this drawcall
-            for(unsigned i = nTextures; i > nTexturesNow; i--)
-            {
-                glActiveTexture(GL_TEXTURE0 + i - 1);
-                glBindTexture(GL_TEXTURE_2D, 0);
-            }
-            nTextures = nTexturesNow;
+                glm::mat4 mvpMtx = viewProjectionMtx * transform.matrix;
+                glUniformMatrix4fv(stage.program.uniforms["u_ModelViewProjection"], 1, false, &mvpMtx[0][0]);
 
-            // Bind VBO+IBO and render
-            glBindVertexArray(gpuMesh.vao);
-            glDrawElements(GL_TRIANGLES, mesh.data->indices.size(), GL_UNSIGNED_INT, nullptr);
-        });
+                // Unbind all textures that would be unused this drawcall
+                for(unsigned i = nTextures; i > nTexturesNow; i--)
+                {
+                    glActiveTexture(GL_TEXTURE0 + i - 1);
+                    glBindTexture(GL_TEXTURE_2D, 0);
+                }
+                nTextures = nTexturesNow;
 
-    glBindVertexArray(0);
-    glUseProgram(0);
-    glDisable(GL_DEPTH_TEST);
+                // Bind VBO+IBO and render
+                glBindVertexArray(gpuMesh.vao);
+                glDrawElements(GL_TRIANGLES, mesh.data->indices.size(), GL_UNSIGNED_INT, nullptr);
+            });
+
+        glBindVertexArray(0);
+        glUseProgram(0);
+        glDisable(GL_DEPTH_TEST);
+    }
+    // else: Hard to render anything without a camera...
 
     // -------------------------------------------------------------------------
 

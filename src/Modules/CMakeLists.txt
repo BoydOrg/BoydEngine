@@ -42,12 +42,22 @@ macro(boyd_module)
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/modules"
         LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/modules"
     )
+    target_compile_definitions(${_BOYD_MODULE_NAME} PRIVATE
+        # NOTE: PRIVATE because when BOYD_DLL_EXPORTS is set for a module it is not set for BoydEngine, and vice versa!
+	    -DBOYD_DLL_EXPORTS
+    )
     target_include_directories(${_BOYD_MODULE_NAME} BEFORE PUBLIC
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
         ${_BOYD_MODULE_INCLUDES}
+        # NOTE: Include all include directories of the parent executable
+        $<TARGET_PROPERTY:BoydEngine,INCLUDE_DIRECTORIES>
     ) 
     target_link_libraries(${_BOYD_MODULE_NAME} PUBLIC
         ${_BOYD_MODULE_LINKS}
+        # [Header-only] libs that are needed by all modules (and are safe to link to)
+        EnTT::EnTT
+        fmt::fmt
+        BoydThreads
     )
 
     if (BOYD_HOT_RELOADING)

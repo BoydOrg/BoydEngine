@@ -42,7 +42,6 @@ void RegisterModule(const string& moduleName, int priorityNo)
     modules.emplace_back(moduleName, priorityNo);
     InsertionSortLast();
 }
-
 #endif
 
 

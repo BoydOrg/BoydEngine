@@ -95,7 +95,7 @@ bool UploadMesh(const comp::Mesh &mesh, gl3::SharedMesh &gpuMesh)
                           sizeof(comp::Mesh::Vertex), BOYD_OFFSETOF(comp::Mesh::Vertex, normal));
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 4, GL_FLOAT, false,
-                          sizeof(comp::Mesh::Vertex), BOYD_OFFSETOF(comp::Mesh::Vertex, tintEmission));
+                          sizeof(comp::Mesh::Vertex), BOYD_OFFSETOF(comp::Mesh::Vertex, tint));
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(3, 2, GL_FLOAT, false,
                           sizeof(comp::Mesh::Vertex), BOYD_OFFSETOF(comp::Mesh::Vertex, texCoord));
@@ -104,15 +104,24 @@ bool UploadMesh(const comp::Mesh &mesh, gl3::SharedMesh &gpuMesh)
     return true;
 }
 
-/// Map Texture::Format to OpenGL <internalFormat, format> pairs.
+/// Map Texture::Format to OpenGL <internalFormat, format, input data type>.
 struct ImageFormat
 {
     GLenum internalFormat;
     GLenum format;
+    GLenum dtype;
 };
 static constexpr const ImageFormat GL_IMAGEFORMAT_MAP[] = {
-    {GL_RGB8, GL_RGB},   // RGB8
-    {GL_RGBA8, GL_RGBA}, // RGBA8
+    // 8-bit int
+    {GL_R8, GL_RED, GL_UNSIGNED_BYTE},
+    {GL_RG8, GL_RG, GL_UNSIGNED_BYTE},
+    {GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE},
+    {GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE},
+    // 16-bit float
+    {GL_R16F, GL_RED, GL_FLOAT},
+    {GL_RG16F, GL_RG, GL_FLOAT},
+    {GL_RGB16F, GL_RGB, GL_FLOAT},
+    {GL_RGBA16F, GL_RGBA, GL_FLOAT},
 };
 
 /// Map Texture::Filter to OpenGL filtering modes.
@@ -139,11 +148,15 @@ bool UploadTexture(const comp::Texture &texture, gl3::SharedTexture &gpuTexture)
                  imgFormat.internalFormat,
                  texture.data->width, texture.data->height, 0,
                  imgFormat.format,
-                 GL_UNSIGNED_BYTE, // FIXME: What if it's different?
+                 imgFormat.dtype,
                  texture.data->pixels.data());
 
-    glTexParameteri(gpuTexture, GL_TEXTURE_MIN_FILTER, GL_IMAGEFILTER_MAP[texture.data->minfilter]);
-    glTexParameteri(gpuTexture, GL_TEXTURE_MAG_FILTER, GL_IMAGEFILTER_MAP[texture.data->magFilter]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_IMAGEFILTER_MAP[texture.data->minFilter]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_IMAGEFILTER_MAP[texture.data->magFilter]);
+    if(texture.data->minFilter == comp::Texture::Trilinear || texture.data->minFilter == comp::Texture::Anisotropic)
+    {
+        glGenerateMipmap(gpuTexture);
+    }
 
     glBindTexture(GL_TEXTURE_2D, 0);
     return true;

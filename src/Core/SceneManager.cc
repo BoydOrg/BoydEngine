@@ -30,28 +30,11 @@ void boyd::SceneManager::LoadScene(const std::filesystem::path &scene)
     // Just instantiate random stuff
     /// The camera is instantiated in scripts/main.lua now :)
 
-    auto object = registry.create();
-    registry.assign<boyd::comp::Transform>(object, glm::translate(glm::rotate(glm::identity<glm::mat4>(), glm::pi<float>(), {0.0f, 1.0f, 0.0f}), glm::vec3{0.0f, 5.0f, 0.0f}));
-    auto &material = registry.assign<boyd::comp::Material>(object);
-    material.parameters["DiffuseMap"] = comp::Texture({
-        comp::Texture::RGB8,
-        1,
-        1,
-        {255, 255, 255},
-        comp::Texture::Nearest,
-        comp::Texture::Nearest,
-        comp::Texture::Static,
-    });
+    auto testCube = registry.create();
+    registry.assign<boyd::comp::Transform>(testCube, glm::translate(glm::identity<glm::mat4>(), glm::vec3{0.0f, 0.0f, -3.0f}));
 
-    auto object2 = registry.create();
-    registry.assign<boyd::comp::Transform>(object2, glm::translate(glm::identity<glm::mat4>(), glm::vec3{0.0f, 0.0f, 0.0f}));
-
-    boyd::comp::ComponentLoadRequest suzanneGltf{
-        {boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::Gltf>(), "assets/GLTF/SuzanneColor0.glb"},
-    };
     boyd::comp::ComponentLoadRequest cubeReq{
-        {boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::Gltf>(), "assets/GLTF/SampleCube.gltf.glb"},
+        {boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::Gltf>(), "assets/GLTF/TexturedCube.glb"},
     };
-    registry.assign<boyd::comp::ComponentLoadRequest>(object, std::move(suzanneGltf));
-    registry.assign<boyd::comp::ComponentLoadRequest>(object2, std::move(cubeReq));
+    registry.assign<boyd::comp::ComponentLoadRequest>(testCube, std::move(cubeReq));
 }
