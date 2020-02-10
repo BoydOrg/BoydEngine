@@ -14,8 +14,16 @@ struct BOYD_API Texture
 {
     enum Format
     {
-        RGB8 = 0,
-        RGBA8 = 1,
+        // 8-bit unsigned normalized
+        R8,
+        RG8,
+        RGB8,
+        RGBA8,
+        // 16-bit float
+        R16F,
+        RG16F,
+        RGB16F,
+        RGBA16F,
     };
 
     enum Usage

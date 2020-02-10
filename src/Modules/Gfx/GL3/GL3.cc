@@ -104,15 +104,24 @@ bool UploadMesh(const comp::Mesh &mesh, gl3::SharedMesh &gpuMesh)
     return true;
 }
 
-/// Map Texture::Format to OpenGL <internalFormat, format> pairs.
+/// Map Texture::Format to OpenGL <internalFormat, format, input data type>.
 struct ImageFormat
 {
     GLenum internalFormat;
     GLenum format;
+    GLenum dtype;
 };
 static constexpr const ImageFormat GL_IMAGEFORMAT_MAP[] = {
-    {GL_RGB8, GL_RGB},   // RGB8
-    {GL_RGBA8, GL_RGBA}, // RGBA8
+    // 8-bit int
+    {GL_R8, GL_RED, GL_UNSIGNED_BYTE},
+    {GL_RG8, GL_RG, GL_UNSIGNED_BYTE},
+    {GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE},
+    {GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE},
+    // 16-bit float
+    {GL_R16F, GL_RED, GL_FLOAT},
+    {GL_RG16F, GL_RG, GL_FLOAT},
+    {GL_RGB16F, GL_RGB, GL_FLOAT},
+    {GL_RGBA16F, GL_RGBA, GL_FLOAT},
 };
 
 /// Map Texture::Filter to OpenGL filtering modes.
@@ -139,7 +148,7 @@ bool UploadTexture(const comp::Texture &texture, gl3::SharedTexture &gpuTexture)
                  imgFormat.internalFormat,
                  texture.data->width, texture.data->height, 0,
                  imgFormat.format,
-                 GL_UNSIGNED_BYTE, // FIXME: What if it's different?
+                 imgFormat.dtype,
                  texture.data->pixels.data());
 
     glTexParameteri(gpuTexture, GL_TEXTURE_MIN_FILTER, GL_IMAGEFILTER_MAP[texture.data->minfilter]);

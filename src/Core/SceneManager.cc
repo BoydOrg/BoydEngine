@@ -47,7 +47,7 @@ void boyd::SceneManager::LoadScene(const std::filesystem::path &scene)
     registry.assign<boyd::comp::Transform>(object2, glm::translate(glm::identity<glm::mat4>(), glm::vec3{0.0f, 0.0f, 0.0f}));
 
     boyd::comp::ComponentLoadRequest suzanneGltf{
-        {boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::Gltf>(), "assets/GLTF/SuzanneColor0.glb"},
+        {boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::Gltf>(), "assets/GLTF/TexturedCube.glb"},
     };
     boyd::comp::ComponentLoadRequest cubeReq{
         {boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::Gltf>(), "assets/GLTF/SampleCube.gltf.glb"},
