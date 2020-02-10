@@ -5,6 +5,7 @@
 // TODO: Automate this header list from ALL_LOADERS?
 #include "AudioClip.hh"
 #include "Gltf.hh"
+#include "LuaBehaviour.hh"
 #include "String.hh"
 
 namespace boyd

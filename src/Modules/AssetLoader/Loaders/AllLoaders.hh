@@ -10,7 +10,8 @@ namespace boyd
 #define BOYD_ALL_LOADERS()             \
     BOYD_LOADER(boyd::comp::String)    \
     BOYD_LOADER(boyd::comp::AudioClip) \
-    BOYD_LOADER(boyd::comp::Gltf)
+    BOYD_LOADER(boyd::comp::Gltf)      \
+    BOYD_LOADER(boyd::comp::LuaBehaviour)
 
 /// Registers all known `TypeOf(TAsset) -> Loader<TAsset>` pairs to the given map.
 void RegisterAllLoaders(LoaderMap &map);

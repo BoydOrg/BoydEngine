@@ -1,0 +1,110 @@
+#pragma once
+
+#include "../../Components/LuaBehaviour.hh"
+#include "Lua.hh"
+
+#include <chrono>
+#include <fmt/format.h>
+#include <string>
+
+namespace boyd
+{
+namespace comp
+{
+struct BOYD_API LuaInternals
+{
+    lua_State *L;
+    std::string scriptIdentifier;
+    bool withUpdate, withHalt;
+
+    void FindFunctions()
+    {
+        lua_getfield(L, -1, "update");
+        if(lua_isfunction(L, -1) == LUA_OK)
+        {
+            withUpdate = true;
+        }
+        lua_pop(L, 1);
+        lua_getfield(L, -1, "halt");
+        if(lua_isfunction(L, -1) == LUA_OK)
+        {
+            withHalt = true;
+        }
+        lua_pop(L, 1);
+    }
+
+    LuaInternals(boyd::comp::LuaBehaviour &behaviour, int scriptref)
+        : scriptIdentifier{fmt::format(FMT_STRING("luascript#{}"), scriptref)}
+    {
+        L = luaL_newstate();
+        switch(luaL_loadstring(L, behaviour.source.c_str()))
+        {
+        case LUA_OK:
+            BOYD_LOG(Info, "Script loaded successfully");
+            FindFunctions();
+            /// Based on https://stackoverflow.com/a/36408812
+            // create _ENV tables
+            lua_newtable(L);
+            // create _ENV tables
+            lua_newtable(L);
+            // Get the global table
+            lua_getglobal(L, "_G");
+            lua_setfield(L, -2, "__index");
+            // Set global as the metatable
+            lua_setmetatable(L, -2);
+            // Push to the registry with a unique name
+            lua_setfield(L, LUA_REGISTRYINDEX, scriptIdentifier.c_str());
+            lua_getfield(L, LUA_REGISTRYINDEX, scriptIdentifier.c_str());
+            // set the upvalue (_ENV)
+            lua_setupvalue(L, 1, 1);
+            lua_pcall(L, 0, LUA_MULTRET, 0);
+
+            break;
+        case LUA_ERRSYNTAX:
+            BOYD_LOG(Error, "Syntax error: {}", lua_tostring(L, -1));
+            L = nullptr;
+            break;
+        default:
+            BOYD_LOG(Error, "Unexpected error: {}", lua_tostring(L, -1));
+            L = nullptr;
+            break;
+        }
+    }
+
+    ~LuaInternals()
+    {
+        if(L)
+        {
+            Halt();
+            lua_close(L);
+            L = nullptr;
+        }
+    }
+
+    /// Call the Halt method, if it exists
+    void Update()
+    {
+        if(withUpdate)
+        {
+            //Retrieve the table containing the functions of the chunk
+            lua_getfield(L, LUA_REGISTRYINDEX, scriptIdentifier.c_str());
+            //Get the function we want to call
+            lua_getfield(L, -1, "update");
+            //Call it
+            lua_call(L, 0, 0);
+        }
+    }
+
+    // Call the halt method, if it exists
+    void Halt()
+    {
+        if(withHalt)
+        {
+            lua_getfield(L, LUA_REGISTRYINDEX, scriptIdentifier.c_str());
+            lua_getfield(L, -1, "halt");
+            lua_call(L, 0, 0);
+        }
+    }
+};
+} // namespace comp
+} // namespace boyd

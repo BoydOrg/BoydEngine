@@ -1,7 +1,10 @@
 #include "Scripting.hh"
 
+#include "../../Components/LuaBehaviour.hh"
+#include "../../Core/GameState.hh"
 #include "../../Core/Platform.hh"
 #include "../../Debug/Log.hh"
+#include "LuaInternals.hh"
 #include "Registrar.hh"
 
 // TODO: Serialize VM state to disk on halt / reload on init?
@@ -37,11 +40,19 @@ BoydScriptingState::BoydScriptingState()
     }
 
     BOYD_LOG(Debug, "Lua initialized");
+
+    auto &registry = Boyd_GameState()->ecs;
+    observer.connect(registry, entt::collector.group<comp::LuaBehaviour>());
 }
 
 BoydScriptingState::~BoydScriptingState()
 {
     BOYD_LOG(Debug, "Stopping Lua...");
+    // auto &registry = Boyd_GameState()->ecs();
+    // auto view = registry.view<comp::LuaBehaviour>();
+
+    // registry.destroy(view.begin(), view.end());
+
     lua_close(L);
     L = nullptr;
     BOYD_LOG(Debug, "Lua stopped");
@@ -69,7 +80,14 @@ BOYD_API void BoydUpdate_Scripting(void *statePtr)
     luabridge::LuaRef updateFunc = luabridge::getGlobal(state->L, boyd::UPDATE_FUNC_NAME);
     if(updateFunc.isFunction())
     {
-        updateFunc();
+        try
+        {
+            updateFunc();
+        }
+        catch(luabridge::LuaException &e)
+        {
+            BOYD_LOG(Error, "{}", e.what());
+        }
     }
 }
 
