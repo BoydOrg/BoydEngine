@@ -95,7 +95,7 @@ bool UploadMesh(const comp::Mesh &mesh, gl3::SharedMesh &gpuMesh)
                           sizeof(comp::Mesh::Vertex), BOYD_OFFSETOF(comp::Mesh::Vertex, normal));
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 4, GL_FLOAT, false,
-                          sizeof(comp::Mesh::Vertex), BOYD_OFFSETOF(comp::Mesh::Vertex, tintEmission));
+                          sizeof(comp::Mesh::Vertex), BOYD_OFFSETOF(comp::Mesh::Vertex, tint));
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(3, 2, GL_FLOAT, false,
                           sizeof(comp::Mesh::Vertex), BOYD_OFFSETOF(comp::Mesh::Vertex, texCoord));
