@@ -1,10 +1,12 @@
 #pragma once
 
-#include "../Core/Platform.hh"
 #include <entt/entt.hpp>
 #include <initializer_list>
 #include <string>
 #include <unordered_map>
+
+#include "../Core/Platform.hh"
+#include "../Core/Registrar.hh"
 
 namespace boyd
 {
@@ -46,4 +48,24 @@ struct BOYD_API ComponentLoadRequest
 };
 
 } // namespace comp
+
+template <typename TRegister>
+struct Registrar<comp::ComponentLoadRequest, TRegister>
+{
+    static constexpr const char *TYPENAME = "ComponentLoadRequest";
+
+    static comp::ComponentLoadRequest Add(comp::ComponentLoadRequest *self, std::string asset, ENTT_ID_TYPE typeId)
+    {
+        return comp::ComponentLoadRequest{{typeId, asset}};
+    }
+
+    static TRegister Register(TRegister &reg)
+    {
+        return reg.template beginClass<comp::ComponentLoadRequest>(TYPENAME)
+            .template addConstructor<void (*)(void)>()
+            .addFunction("add", Add)
+            .endClass();
+    }
+};
+
 } // namespace boyd

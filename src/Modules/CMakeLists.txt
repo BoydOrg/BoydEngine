@@ -64,7 +64,7 @@ endmacro()
 # ------------------------------------------------------------------------------
 
 boyd_module(NAME Scripting PRIORITY 1
-    SOURCES Scripting/Scripting.cc Scripting/Registrar.cc
+    SOURCES Scripting/Scripting.cc Scripting/Registrar.cc Scripting/3rdparty.cc
     LINKS LuaBridge ${BOYD_LUA}
 )
 

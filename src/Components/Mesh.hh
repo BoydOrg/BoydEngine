@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "../Core/Registrar.hh"
+
 namespace boyd
 {
 namespace comp
@@ -51,4 +53,19 @@ struct BOYD_API Mesh
 };
 
 } // namespace comp
+
+template <typename TRegister>
+struct Registrar<comp::Mesh, TRegister>
+{
+    static constexpr const char *TYPENAME = "Mesh";
+
+    static TRegister Register(TRegister &reg)
+    {
+        // clang-format off
+        return reg.template beginClass<comp::Mesh>(TYPENAME)
+            .template addConstructor<void(*)(void)>()
+        .endClass();
+        // clang-format on
+    }
+};
 } // namespace boyd
