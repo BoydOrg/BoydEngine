@@ -19,6 +19,7 @@ struct BoydScriptingState
     LuaComponentRefFactory compRefFactory;
 
     entt::observer observer;
+    int idCounter = 0;
 
     BoydScriptingState();
     ~BoydScriptingState();

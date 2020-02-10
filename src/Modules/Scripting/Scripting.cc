@@ -119,10 +119,10 @@ BoydScriptingState::BoydScriptingState()
 BoydScriptingState::~BoydScriptingState()
 {
     BOYD_LOG(Debug, "Stopping Lua...");
-    // auto &registry = Boyd_GameState()->ecs();
-    // auto view = registry.view<comp::LuaBehaviour>();
+    auto &registry = Boyd_GameState()->ecs;
+    auto view = registry.view<comp::LuaBehaviour>();
 
-    // registry.destroy(view.begin(), view.end());
+    registry.destroy(view.begin(), view.end());
 
     lua_close(L);
     L = nullptr;
@@ -160,6 +160,17 @@ BOYD_API void BoydUpdate_Scripting(void *statePtr)
             BOYD_LOG(Error, "{}", e.what());
         }
     }
+
+    auto &registry = Boyd_GameState()->ecs;
+    for(auto entity : state->observer)
+    {
+        auto &comp = registry.get<boyd::comp::LuaBehaviour>(entity);
+        auto &internal = registry.assign_or_replace<boyd::comp::LuaInternals>(entity, comp, state->idCounter++);
+    }
+
+    registry.view<boyd::comp::LuaInternals>().each([](boyd::comp::LuaInternals &internals) {
+        internals.Update();
+    });
 }
 
 BOYD_API void BoydHalt_Scripting(void *statePtr)

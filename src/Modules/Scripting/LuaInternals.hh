@@ -36,7 +36,6 @@ struct BOYD_API LuaInternals
     LuaInternals(boyd::comp::LuaBehaviour &behaviour, int scriptref)
         : scriptIdentifier{fmt::format(FMT_STRING("luascript#{}"), scriptref)}
     {
-        L = luaL_newstate();
         switch(luaL_loadstring(L, behaviour.source.c_str()))
         {
         case LUA_OK:
