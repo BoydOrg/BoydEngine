@@ -4,6 +4,7 @@
 
 #include "AudioClip.hh"
 #include "AudioSource.hh"
+#include "BoxCollider.hh"
 #include "Camera.hh"
 #include "ComponentLoadRequest.hh"
 #include "Mesh.hh"
@@ -22,6 +23,7 @@
     BOYD_REGISTER_TYPE(boyd::comp::AudioSource)          \
     BOYD_REGISTER_TYPE(boyd::comp::AudioClip)            \
     BOYD_REGISTER_TYPE(boyd::comp::ComponentLoadRequest) \
-    BOYD_REGISTER_TYPE(boyd::comp::RigidBody)
+    BOYD_REGISTER_TYPE(boyd::comp::RigidBody)            \
+    BOYD_REGISTER_TYPE(boyd::comp::BoxCollider)
 
 // END
