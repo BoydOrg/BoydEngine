@@ -75,29 +75,32 @@ add_subdirectory(Modules/)
 if(EMSCRIPTEN)
     include(${PROJECT_SOURCE_DIR}/emscripten/EmUtilities.cmake)
 
-    # SMALL_XHR_CHINKS: See https://github.com/emscripten-core/emscripten/blob/b82e1d81698a2379f989a4aefc1cd107e00cfdf8/src/library_fs.js#L1734
-    set(BOYD_EMSCRIPTEN_PRELOADS "assets@/assets;scripts@/scripts;"
+    set(BOYD_EMSCRIPTEN_PRELOADS "${PROJECT_SOURCE_DIR}/assets@/assets;${PROJECT_SOURCE_DIR}/scripts@/scripts;"
         CACHE STRING
         "Paths to all assets (files/dirs) to bundle in BoydEngine.data when compiling for Emscripten.\nFormat: <dir1>@<mountpoint1>;<dir2>@<mountpoint2>;..."
     )
-    em_preload_files(BoydEngine "BoydEngine" ${BOYD_EMSCRIPTEN_PRELOADS})
+    # NOTE: Mounting /assets and /scripts at root (/) by default since the FS_PREFIX will be set to "/"
+    #       (instead of "" like on desktop)
+    em_preload_files(BoydEngine "" ${BOYD_EMSCRIPTEN_PRELOADS})
+    set(BOYD_FS_PREFIX "/")
 
+    # SMALL_XHR_CHUNKS: See https://github.com/emscripten-core/emscripten/blob/b82e1d81698a2379f989a4aefc1cd107e00cfdf8/src/library_fs.js#L1734
     target_link_options(BoydEngine PUBLIC
     	"SHELL:-s SMALL_XHR_CHUNKS=1"
 	    "SHELL:-s WASM=1"
-        --pre-js "${PROJECT_SOURCE_DIR}/emscripten/pre.js"
+	    "SHELL:-s FORCE_FILESYSTEM=1"  # IMPORTANT to make --preload work!
+        #--pre-js "${PROJECT_SOURCE_DIR}/emscripten/pre.js"
+        "SHELL:-s ALLOW_MEMORY_GROWTH=1"  # IMPORTANT or the app will not load properly
     )
     if(BOYD_EMSCRIPTEN_PTHREADS)
         target_link_options(BoydEngine PUBLIC "SHELL:-s USE_PTHREADS=1")
     endif()
 
-    set_target_properties(BoydEngine PROPERTIES
-        # Make Emscripten generate the startup page
-        SUFFIX ".html"
-    )
+    #set_target_properties(BoydEngine PROPERTIES
+    #    # Make Emscripten generate the startup page
+    #    SUFFIX ".html"
+    #)
 
-    # The Emscripten filesystem is mounted at /
-    set(BOYD_FS_PREFIX "/")
 else()
     # On most platforms assets are directly in the binary dir
     set(BOYD_FS_PREFIX "")

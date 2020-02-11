@@ -17,12 +17,12 @@ if(NOT EMSCRIPTEN)
 else()
     message("GLES: Targetting Emscripten")
     target_link_libraries(BoydOpenGL INTERFACE -lGL)
+
+    # USE_WEBGL2=1 enables the web-friendly subset of OpenGL ES 3.0!
     target_compile_options(BoydOpenGL INTERFACE
-        "SHELL:-s USE_WEBGL2=3"
-        "SHELL:-s FULL_ES3=3"
+        "SHELL:-s USE_WEBGL2=1"
     )
     target_link_options(BoydOpenGL INTERFACE
-        "SHELL:-s USE_WEBGL2=3"
-        "SHELL:-s FULL_ES3=3"
+        "SHELL:-s USE_WEBGL2=1"
     )
 endif()

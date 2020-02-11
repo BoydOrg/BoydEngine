@@ -50,6 +50,11 @@ bool BoydGfxState::InitContext()
 
     BOYD_LOG(Debug, "OpenGL: {} ({})", glGetString(GL_VERSION), glGetString(GL_VENDOR));
 
+#ifndef BOYD_PLATFORM_EMSCRIPTEN
+    // IMPORTANT: VSync as frame-limiter (esp. on Emscripten!!)
+    glfwSwapInterval(1);
+#endif
+
 #ifdef BOYD_GLES3_FLEXTGL
     if(!flextInit(window))
     {

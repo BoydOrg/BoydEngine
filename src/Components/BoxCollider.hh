@@ -5,7 +5,6 @@
 
 #include "ColliderBase.hh"
 #include <fmt/format.h>
-#include <reactphysics3d.h>
 
 namespace boyd
 {

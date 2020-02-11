@@ -1,9 +1,13 @@
 #include <cstdio>
 #include <memory>
 
+#include "Core/Platform.hh"
+#ifdef BOYD_PLATFORM_EMSCRIPTEN
+#    include <emscripten.h>
+#endif
+
 #include "BoydEngine.hh"
 #include "Core/GameState.hh"
-#include "Core/Platform.hh"
 #include "Core/SceneManager.hh"
 #include "Debug/Log.hh"
 
@@ -43,12 +47,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     SceneManager::LoadScene("res/scene/1.scene");
 
+#ifndef BOYD_PLATFORM_EMSCRIPTEN
     // Main game loop
+
+    BOYD_LOG(Info, "Entering game loop");
     while(Boyd_GameState()->running)
     {
         // NOTE: Gfx is treated as a normal system (it makes drawcalls inside of its update() method).
         UpdateModules();
     }
+    BOYD_LOG(Info, "Exiting game loop");
+#else
+    // Emscripten wants a function that it can call once per loop.
+    // This will run forever!
+    emscripten_set_main_loop(&UpdateModules, 0, true);
+#endif
 
 #ifdef BOYD_HOT_RELOADING
     CloseListener();
