@@ -14,7 +14,9 @@ struct Loader<comp::LuaBehaviour>
         std::string buffer;
         if(Slurp(filepath, buffer))
         {
-            return std::make_unique<LoadedAsset<comp::LuaBehaviour>>(std::move(buffer));
+            auto ptr = std::make_unique<LoadedAsset<comp::LuaBehaviour>>(std::move(buffer));
+            ptr->asset.description = filepath;
+            return ptr;
         }
         else
         {
