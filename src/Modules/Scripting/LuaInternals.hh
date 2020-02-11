@@ -13,38 +13,20 @@ namespace comp
 {
 struct BOYD_API LuaInternals
 {
-    lua_State *L;
     std::string scriptIdentifier;
-    bool withUpdate, withHalt;
+    bool withUpdate = true, withHalt = true;
 
-    void FindFunctions()
-    {
-        lua_getfield(L, -1, "update");
-        if(lua_isfunction(L, -1) == LUA_OK)
-        {
-            withUpdate = true;
-        }
-        lua_pop(L, 1);
-        lua_getfield(L, -1, "halt");
-        if(lua_isfunction(L, -1) == LUA_OK)
-        {
-            withHalt = true;
-        }
-        lua_pop(L, 1);
-    }
-
-    LuaInternals(boyd::comp::LuaBehaviour &behaviour, int scriptref)
+    LuaInternals(const boyd::comp::LuaBehaviour &behaviour, lua_State *L, int scriptref)
         : scriptIdentifier{fmt::format(FMT_STRING("luascript#{}"), scriptref)}
     {
         switch(luaL_loadstring(L, behaviour.source.c_str()))
         {
         case LUA_OK:
             BOYD_LOG(Info, "Script loaded successfully");
-            FindFunctions();
             /// Based on https://stackoverflow.com/a/36408812
             // create _ENV tables
             lua_newtable(L);
-            // create _ENV tables
+            // create metatables
             lua_newtable(L);
             // Get the global table
             lua_getglobal(L, "_G");
@@ -70,18 +52,8 @@ struct BOYD_API LuaInternals
         }
     }
 
-    ~LuaInternals()
-    {
-        if(L)
-        {
-            Halt();
-            lua_close(L);
-            L = nullptr;
-        }
-    }
-
     /// Call the Halt method, if it exists
-    void Update()
+    void Update(lua_State *L)
     {
         if(withUpdate)
         {
@@ -89,13 +61,19 @@ struct BOYD_API LuaInternals
             lua_getfield(L, LUA_REGISTRYINDEX, scriptIdentifier.c_str());
             //Get the function we want to call
             lua_getfield(L, -1, "update");
-            //Call it
-            lua_call(L, 0, 0);
+
+            int type = lua_type(L, -1);
+
+            if(!lua_isnil(L, -1))
+            {
+                //Call it
+                lua_call(L, 0, 0);
+            }
         }
     }
 
     // Call the halt method, if it exists
-    void Halt()
+    void Halt(lua_State *L)
     {
         if(withHalt)
         {

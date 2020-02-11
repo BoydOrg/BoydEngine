@@ -146,8 +146,8 @@ BOYD_API void *BoydInit_Scripting()
 BOYD_API void BoydUpdate_Scripting(void *statePtr)
 {
     auto *state = GetState(statePtr);
-
     // Call the update function in the main script, if any
+    /*
     luabridge::LuaRef updateFunc = luabridge::getGlobal(state->L, boyd::UPDATE_FUNC_NAME);
     if(updateFunc.isFunction())
     {
@@ -160,16 +160,20 @@ BOYD_API void BoydUpdate_Scripting(void *statePtr)
             BOYD_LOG(Error, "{}", e.what());
         }
     }
+    */
 
     auto &registry = Boyd_GameState()->ecs;
     for(auto entity : state->observer)
     {
+        BOYD_LOG(Info, "Detected new script in ECS, building");
         auto &comp = registry.get<boyd::comp::LuaBehaviour>(entity);
-        auto &internal = registry.assign_or_replace<boyd::comp::LuaInternals>(entity, comp, state->idCounter++);
+        auto &internal = registry.assign_or_replace<boyd::comp::LuaInternals>(entity, comp, state->L, state->idCounter++);
     }
 
-    registry.view<boyd::comp::LuaInternals>().each([](boyd::comp::LuaInternals &internals) {
-        internals.Update();
+    state->observer.clear();
+
+    registry.view<boyd::comp::LuaInternals>().each([state](boyd::comp::LuaInternals &internals) {
+        internals.Update(state->L);
     });
 }
 
