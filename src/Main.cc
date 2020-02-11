@@ -7,6 +7,7 @@
 #endif
 
 #include "BoydEngine.hh"
+#include "Components/Voxels.hh"
 #include "Core/GameState.hh"
 #include "Core/SceneManager.hh"
 #include "Debug/Log.hh"
@@ -84,6 +85,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 #endif
     // Force all modules to be unloaded before the GameState singleton is destroyed.
     // Important to prevent crashes on exit!
+    modules.clear();
+
+    // Force all modules to be unloaded before the GameState singleton is destroyed.
+    // Important to prevent crashes!
     modules.clear();
 
     return 0;

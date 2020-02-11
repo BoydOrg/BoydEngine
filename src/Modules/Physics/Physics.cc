@@ -1,10 +1,11 @@
 #include "../../Components/BoxCollider.hh"
-#include "../../Components/ColliderInternals.hh"
 #include "../../Components/RigidBody.hh"
 #include "../../Components/Transform.hh"
 #include "../../Core/GameState.hh"
 #include "../../Core/Platform.hh"
 #include "../../Debug/Log.hh"
+
+#include "ColliderInternals.hh"
 
 #include <chrono>
 #include <entt/entt.hpp>

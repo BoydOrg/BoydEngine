@@ -7,6 +7,7 @@
 #include "BoxCollider.hh"
 #include "Camera.hh"
 #include "ComponentLoadRequest.hh"
+#include "LuaBehaviour.hh"
 #include "Mesh.hh"
 #include "RigidBody.hh"
 #include "String.hh"
@@ -24,6 +25,7 @@
     BOYD_REGISTER_TYPE(boyd::comp::AudioClip)            \
     BOYD_REGISTER_TYPE(boyd::comp::ComponentLoadRequest) \
     BOYD_REGISTER_TYPE(boyd::comp::RigidBody)            \
-    BOYD_REGISTER_TYPE(boyd::comp::BoxCollider)
+    BOYD_REGISTER_TYPE(boyd::comp::BoxCollider)          \
+    BOYD_REGISTER_TYPE(boyd::comp::LuaBehaviour)
 
 // END

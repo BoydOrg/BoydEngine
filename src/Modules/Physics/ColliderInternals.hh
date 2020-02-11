@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../Core/Platform.hh"
-#include "BoxCollider.hh"
-#include "ColliderBase.hh"
-#include "RigidBody.hh"
-#include "Transform.hh"
+#include "../../Components/BoxCollider.hh"
+#include "../../Components/ColliderBase.hh"
+#include "../../Components/RigidBody.hh"
+#include "../../Components/Transform.hh"
+#include "../../Core/Platform.hh"
 #include <memory>
 #include <reactphysics3d.h>
 #include <type_traits>

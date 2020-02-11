@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "Lua.hh"
+#include <entt/entt.hpp>
 
 namespace boyd
 {
@@ -16,6 +17,9 @@ struct BoydScriptingState
 {
     lua_State *L;
     LuaComponentRefFactory compRefFactory;
+
+    entt::observer observer;
+    int idCounter = 0;
 
     BoydScriptingState();
     ~BoydScriptingState();
