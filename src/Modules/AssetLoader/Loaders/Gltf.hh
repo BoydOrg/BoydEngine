@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "../../../Components/Gltf.hh"
+#include "../../../Components/Material.hh"
 #include "../../../Components/Mesh.hh"
 #include "../LoadedAsset.hh"
 
@@ -17,6 +18,15 @@
 namespace boyd
 {
 
+/// Helper to hash a pair of ints.
+struct IntPairHasher
+{
+    inline size_t operator()(const std::pair<int, int> &key) const
+    {
+        return size_t((key.first * 42) ^ key.second);
+    }
+};
+
 /// An atttribute in comp::Mesh::Vertex.
 struct VertexAttrib
 {
@@ -29,7 +39,32 @@ static const std::unordered_map<std::string, VertexAttrib> VERTEX_ATTRIBS{
     {"POSITION", {offsetof(comp::Mesh::Vertex, position), 3 * sizeof(float)}},
     {"NORMAL", {offsetof(comp::Mesh::Vertex, normal), 3 * sizeof(float)}},
     {"TEXCOORD_0", {offsetof(comp::Mesh::Vertex, texCoord), 2 * sizeof(float)}},
-    {"COLOR_0", {offsetof(comp::Mesh::Vertex, tintEmission), 3 * sizeof(float)}},
+    {"COLOR_0", {offsetof(comp::Mesh::Vertex, tint), 4 * sizeof(float)}},
+};
+
+/// Maps GLTF texture filters to `comp::Texture::Filter`s.
+static const std::unordered_map<int, comp::Texture::Filter> GLTF_FILTER_MAP{
+    {-1, comp::Texture::Bilinear}, ///< -1: "undefined" in tinygltf -> default
+    {TINYGLTF_TEXTURE_FILTER_NEAREST, comp::Texture::Nearest},
+    {TINYGLTF_TEXTURE_FILTER_LINEAR, comp::Texture::Bilinear},
+    {TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST, comp::Texture::Nearest},  // (no direct equivalent)
+    {TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR, comp::Texture::Nearest},   // (no direct equivalent)
+    {TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST, comp::Texture::Trilinear}, // (no direct equivalent)
+    {TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR, comp::Texture::Trilinear},  // (no direct equivalent)
+};
+
+/// Maps GLTF <# comps, format> pairs to `comp::Texture::Format`s.
+static const std::unordered_map<std::pair<int, int>, comp::Texture::Format, IntPairHasher> GLTF_FORMAT_MAP{
+    // 8-bit int
+    {{1, TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE}, comp::Texture::R8},
+    {{2, TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE}, comp::Texture::RG8},
+    {{3, TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE}, comp::Texture::RGB8},
+    {{4, TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE}, comp::Texture::RGBA8},
+    // 16-bit float
+    {{1, TINYGLTF_COMPONENT_TYPE_SHORT}, comp::Texture::R16F},
+    {{2, TINYGLTF_COMPONENT_TYPE_SHORT}, comp::Texture::RG16F},
+    {{3, TINYGLTF_COMPONENT_TYPE_SHORT}, comp::Texture::RGB16F},
+    {{4, TINYGLTF_COMPONENT_TYPE_SHORT}, comp::Texture::RGBA16F},
 };
 
 /// Converts a `TInteger` (pointed to by valuePtr) to a comp::mesh::Index.
@@ -53,7 +88,8 @@ struct LoadedGltfModel : public LoadedAssetBase
     tinygltf::Model gltfModel;
 
     comp::Mesh mesh;
-    bool hasMesh;
+    comp::Material material;
+    bool hasMesh, hasMaterial;
 
     LoadedGltfModel(std::string filepath, tinygltf::Model &&model)
         : LoadedAssetBase(entt::type_info<comp::Gltf>::id()), filepath{filepath}, gltfModel{std::move(model)}
@@ -63,9 +99,13 @@ struct LoadedGltfModel : public LoadedAssetBase
         // - Cameras
         // - Skeletons + animations
         // - Lights
-        hasMesh = false;
+        hasMesh = hasMaterial = false;
         if(!gltfModel.meshes.empty())
         {
+            if(LoadMaterial(gltfModel.meshes[0], this->material))
+            {
+                hasMaterial = true;
+            }
             if(LoadMesh(gltfModel.meshes[0], this->mesh))
             {
                 hasMesh = true;
@@ -78,10 +118,15 @@ struct LoadedGltfModel : public LoadedAssetBase
 
     void AssignComponent(entt::registry &ecs, entt::entity target) override
     {
+        if(hasMaterial)
+        {
+            ecs.assign_or_replace<comp::Material>(target, std::move(material));
+        }
         if(hasMesh)
         {
             ecs.assign_or_replace<comp::Mesh>(target, std::move(mesh));
         }
+        // GLTF loaded
         ecs.assign_or_replace<comp::Gltf>(target);
     }
 
@@ -170,6 +215,79 @@ private:
             return true; // comp::Mesh::Data was edited
         };
         outMesh.data.Edit(LoadMeshComponent);
+
+        return true;
+    }
+
+    bool LoadTexture(int gltfTextureId, comp::Texture &outTexture)
+    {
+        const auto &gltfTexture = gltfModel.textures[gltfTextureId];
+        const auto &gltfImage = gltfModel.images[gltfTexture.source];
+
+        comp::Texture::Filter minFilter = comp::Texture::Bilinear, magFilter = comp::Texture::Bilinear;
+        if(gltfTexture.sampler >= 0)
+        {
+            const auto &gltfSampler = gltfModel.samplers[gltfTexture.sampler];
+            minFilter = GLTF_FILTER_MAP.at(gltfSampler.minFilter);
+            magFilter = GLTF_FILTER_MAP.at(gltfSampler.magFilter);
+        }
+
+        const auto formatIt = GLTF_FORMAT_MAP.find({gltfImage.component, gltfImage.pixel_type});
+        if(formatIt == GLTF_FORMAT_MAP.end())
+        {
+            BOYD_LOG(Error, "Unsupporte texture format for texture {} - it will be ignored!", gltfTextureId);
+        }
+
+        // TODO IMPLEMENT image format conversion?
+
+        outTexture = comp::Texture{comp::Texture::Data{
+            formatIt->second,
+            unsigned(gltfImage.width),
+            unsigned(gltfImage.height),
+            gltfImage.image, // (copy)
+            minFilter,
+            magFilter,
+            comp::Texture::Static,
+        }};
+        return true;
+    }
+
+    bool LoadMaterial(tinygltf::Mesh &gltfMesh, comp::Material &outMaterial)
+    {
+        if(gltfMesh.primitives.empty())
+        {
+            return false;
+        }
+        const auto &gltfPrimitive = gltfMesh.primitives[0];
+        const auto &gltfMaterial = gltfModel.materials[gltfPrimitive.material];
+
+        // TODO: This only loads the first primitive's material...
+        // TODO: Also load the color multipliers for the textures?
+        // TODO: Load other textures?
+
+        int gltfDiffuseTextureIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
+
+        comp::Texture diffuseMap{comp::Texture::Data{
+            comp::Texture::RGB8,
+            1,
+            1,
+            {255, 255, 255},
+            comp::Texture::Nearest,
+            comp::Texture::Nearest,
+            comp::Texture::Static,
+        }};
+
+        if(gltfDiffuseTextureIndex >= 0)
+        {
+            const auto &gltfDiffuseTexture = gltfModel.textures[gltfDiffuseTextureIndex];
+            if(!LoadTexture(gltfDiffuseTexture.source, diffuseMap))
+            {
+                BOYD_LOG(Error, "Failed to load diffuse map!");
+            }
+        }
+        // else: default to the white texture
+
+        outMaterial.parameters["DiffuseMap"] = std::move(diffuseMap);
 
         return true;
     }
