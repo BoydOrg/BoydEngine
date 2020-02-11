@@ -15,12 +15,6 @@ namespace boyd
 /// The path to the main script, to be execute automatically as the scripting module is started
 static constexpr const char *MAIN_SCRIPT = "scripts/main.lua";
 
-/// The name of the update function defined in the script; it is executed every update of the scripting module.
-static constexpr const char *UPDATE_FUNC_NAME = "update";
-
-/// The name of the update function defined in the script; it is executed when the scripting module is halted.
-static constexpr const char *HALT_FUNC_NAME = "halt";
-
 /// LuaCFunction replacement for the builtin "print()" - logs to BOYD_LOG instead
 /// Lua args:
 /// - string*
@@ -54,8 +48,10 @@ static int LuaPrint(lua_State *L)
     lua_getstack(L, 1, &dbg);
     lua_getinfo(L, "Sl", &dbg); // Fill specific fields in `dbg` - see Lua docs
 
+    luabridge::LuaRef short_src = luabridge::getGlobal(L, boyd::GLOBAL_SCRIPT_IDENTIFIER);
+
     // Finally, log the message
-    boyd::Log::instance().log(LogLevel::Debug, dbg.short_src, dbg.currentline,
+    boyd::Log::instance().log(LogLevel::Debug, short_src.tostring().c_str(), dbg.currentline,
                               FMT_STRING("{}"), buffer.data());
 
     return 0;
