@@ -24,12 +24,12 @@ struct BOYD_API Camera
         Ortho = 1,
     } mode;
 
-    float fov;                      ///< Horizontal FOV (in radians) for Persp cameras.
+    float fov;                      ///< Vertical FOV (*in degrees*) for Persp cameras.
     float left, right, bottom, top; ///< Left, right, bottom, top for Ortho cameras.
     float zNear, zFar;              ///< Near and far clipping planes.
                                     ///  Set to +/-infinity on Ortho cameras to get an infinite viewing volume.
 
-    /// Creates a perspective camera. fov is the horizontal FoV *in degrees*.
+    /// Creates a perspective camera. fov is the vertical FoV *in degrees*.
     static Camera Perspective(float fov, float zNear = 0.1f, float zFar = 1000.0f)
     {
         return {Persp, fov, 0.0f, 0.0f, 0.0f, 0.0f, zNear, zFar};
