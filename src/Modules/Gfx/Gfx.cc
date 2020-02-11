@@ -132,12 +132,11 @@ unsigned BoydGfxState::ApplyMaterialParams(const comp::Material &material, gl3::
     for(const auto &param : material.parameters)
     {
         uniformName = fmt::format(FMT_STRING("u_{}"), param.first);
-        auto uniformLocIt = program.uniforms.find(uniformName);
-        if(uniformLocIt == program.uniforms.end())
+        GLint uniformLoc = program.uniformLocation(uniformName);
+        if(uniformLoc < 0)
         {
             continue;
         }
-        GLint uniformLoc = uniformLocIt->second;
 
         switch(param.second.index())
         {
@@ -206,7 +205,7 @@ void BoydGfxState::Update()
         switch(camera.mode)
         {
         case comp::Camera::Persp:
-            projMtx = glm::perspectiveFov(camera.fov, screenSize.x, screenSize.y, camera.zNear, camera.zFar);
+            projMtx = glm::perspective(camera.fov, screenSize.x / screenSize.y, camera.zNear, camera.zFar);
             break;
         default: // comp::Camera::Ortho
             if(glm::isinf(camera.zNear) || glm::isinf(camera.zFar))
@@ -254,7 +253,7 @@ void BoydGfxState::Update()
                 unsigned nTexturesNow = ApplyMaterialParams(material, stage.program);
 
                 glm::mat4 mvpMtx = viewProjectionMtx * transform.matrix;
-                glUniformMatrix4fv(stage.program.uniforms["u_ModelViewProjection"], 1, false, &mvpMtx[0][0]);
+                glUniformMatrix4fv(stage.program.uniformLocation("u_ModelViewProjection"), 1, false, &mvpMtx[0][0]);
 
                 // Unbind all textures that would be unused this drawcall
                 for(unsigned i = nTextures; i > nTexturesNow; i--)

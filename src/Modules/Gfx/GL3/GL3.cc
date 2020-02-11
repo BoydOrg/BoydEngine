@@ -151,6 +151,10 @@ bool UploadTexture(const comp::Texture &texture, gl3::SharedTexture &gpuTexture)
                  imgFormat.dtype,
                  texture.data->pixels.data());
 
+    // (NOTE: might be required on Emscripten)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_IMAGEFILTER_MAP[texture.data->minFilter]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_IMAGEFILTER_MAP[texture.data->magFilter]);
     if(texture.data->minFilter == comp::Texture::Trilinear || texture.data->minFilter == comp::Texture::Anisotropic)

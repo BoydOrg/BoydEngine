@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../Core/Platform.hh"
 #include "../../Debug/Log.hh"
 #include <memory>
 #include <utility>
@@ -158,8 +159,14 @@ public:
     explicit SharedProgram(GLuint handle)
         : SharedHandle(handle, Deleter)
     {
+        if(handle == 0)
+        {
+            return;
+        }
+
         GLint nUniforms = 0;
         glGetProgramiv(handle, GL_ACTIVE_UNIFORMS, &nUniforms);
+        //BOYD_LOG(Debug, "Program {} has {} uniforms", handle, nUniforms);
 
         GLchar uniformName[64];
         GLsizei uniformNameLen;
@@ -168,8 +175,26 @@ public:
         for(GLint i = 0; i < nUniforms; i++)
         {
             glGetActiveUniform(handle, GLuint(i), sizeof(uniformName), &uniformNameLen, &uSize, &uType, uniformName);
-            uniforms[std::string{uniformName, size_t(uniformNameLen)}] = i;
+            std::string nameStr{uniformName, size_t(uniformNameLen)};
+            uniforms[nameStr] = i;
+            //BOYD_LOG(Debug, "Program {}: uniform {} is {}", handle, i, nameStr);
         }
+    }
+
+    /// Potentially faster version of `glUniformLocation`; uses the internal map to do the lookup.
+    inline GLint uniformLocation(const std::string &name)
+    {
+#ifndef BOYD_PLATFORM_EMSCRIPTEN
+        auto uniformLocIt = uniforms.find(name);
+        if(uniformLocIt == uniforms.end())
+        {
+            return -1;
+        }
+        return uniformLocIt->second;
+#else
+        // FIXME: Seems to be an Emscripten bug; not querying the uniform location explictly causes the uniform not to be set correctly!
+        return glGetUniformLocation(*handle, name.c_str());
+#endif
     }
 
 private:
