@@ -4,6 +4,9 @@ if (typeof (Module) === "undefined") Module = {};
 // See: https://emscripten.org/docs/porting/files/Synchronous-Virtual-XHR-Backed-File-System-Usage.html
 var worker = new Worker('LoaderWorker.js');
 worker.onmessage = function (moduleMsg) {
-    Module = moduleMsg.data['Module'];
-    console.log(Module);
+    console.log("Got Module from the XHR worker");
+    var newModule = moduleMsg.data['Module'];
+    console.log(newModule);
+
+    Module = Object.assign(Module, newModule);
 };

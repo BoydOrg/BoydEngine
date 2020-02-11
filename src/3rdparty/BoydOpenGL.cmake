@@ -17,6 +17,12 @@ if(NOT EMSCRIPTEN)
 else()
     message("GLES: Targetting Emscripten")
     target_link_libraries(BoydOpenGL INTERFACE -lGL)
-    target_compile_options(BoydOpenGL INTERFACE "SHELL:-s FULL_ES3=1")
-    target_link_options(BoydOpenGL INTERFACE "SHELL:-s FULL_ES3=1")
+    target_compile_options(BoydOpenGL INTERFACE
+        "SHELL:-s USE_WEBGL2=3"
+        "SHELL:-s FULL_ES3=3"
+    )
+    target_link_options(BoydOpenGL INTERFACE
+        "SHELL:-s USE_WEBGL2=3"
+        "SHELL:-s FULL_ES3=3"
+    )
 endif()
