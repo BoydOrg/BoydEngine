@@ -162,9 +162,10 @@ unsigned BoydGfxState::ApplyMaterialParams(const comp::Material &material, gl3::
             break;
         case 6: // comp::Texture
         {
-            auto gpuTexture = MapGpuTexture(*std::get_if<comp::Texture>(&param.second));
+            auto &texture = *std::get_if<comp::Texture>(&param.second);
+            auto gpuTexture = MapGpuTexture(texture);
             glActiveTexture(GL_TEXTURE0 + nTexturesApplied);
-            glBindTexture(GL_TEXTURE_2D, gpuTexture); // TODO: support non-2D textures?
+            glBindTexture(gl3::GL_USAGE_MAP[texture.data->type], gpuTexture);
 
             glUniform1i(uniformLoc, nTexturesApplied); // Bind sampler to texture unit
 

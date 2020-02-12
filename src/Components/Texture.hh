@@ -12,6 +12,14 @@ namespace comp
 /// Not really a component, but used inside `comp::Material`s...
 struct BOYD_API Texture
 {
+    enum Type
+    {
+        T2D,      ///< Standard; `width` * `height`.
+        T3D,      ///< 3D texture; `width` * `height` * `depth`.
+        T2DArray, ///< 2D texture array; `depth` layers of `width` * `height` textures.
+        TCubemap, ///< Cubemap texture; 6 `width`^2 textures (in order: +X [right], -X [left], +Y [top], -Y [bottom], +Z [back], -Z [front]).
+    };
+
     enum Format
     {
         // 8-bit unsigned normalized
@@ -43,8 +51,9 @@ struct BOYD_API Texture
 
     struct Data
     {
+        Type type{T2D};
         Format format{RGB8};
-        unsigned width{0}, height{0};
+        unsigned width{0}, height{0}, depth{0};
         std::vector<uint8_t> pixels{};
         Filter minFilter{Bilinear};
         Filter magFilter{Bilinear}; ///< NOTE: Only accepts Nearest or Bilinear!

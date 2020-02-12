@@ -235,15 +235,17 @@ private:
         const auto formatIt = GLTF_FORMAT_MAP.find({gltfImage.component, gltfImage.pixel_type});
         if(formatIt == GLTF_FORMAT_MAP.end())
         {
-            BOYD_LOG(Error, "Unsupporte texture format for texture {} - it will be ignored!", gltfTextureId);
+            BOYD_LOG(Error, "Unsupported texture format for texture {} - it will be ignored!", gltfTextureId);
         }
 
         // TODO IMPLEMENT image format conversion?
 
         outTexture = comp::Texture{comp::Texture::Data{
+            comp::Texture::T2D,
             formatIt->second,
             unsigned(gltfImage.width),
             unsigned(gltfImage.height),
+            0,
             gltfImage.image, // (copy)
             minFilter,
             magFilter,
@@ -268,9 +270,11 @@ private:
         int gltfDiffuseTextureIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
 
         comp::Texture diffuseMap{comp::Texture::Data{
+            comp::Texture::T2D,
             comp::Texture::RGB8,
             1,
             1,
+            0,
             {255, 255, 255},
             comp::Texture::Nearest,
             comp::Texture::Nearest,

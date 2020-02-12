@@ -18,8 +18,39 @@ namespace boyd
 namespace gl3
 {
 
-/// Makes a buffer out of a block of data.
-/// Returns 0 on error.
+const GLenum GL_USAGE_MAP[] = {
+    GL_STATIC_DRAW,  // Static
+    GL_DYNAMIC_DRAW, // Dynamic
+    GL_STREAM_DRAW,  // Streaming
+};
+
+const GLenum GL_TEXTURETYPE_MAP[] = {
+    GL_TEXTURE_2D,       // T2D
+    GL_TEXTURE_3D,       // T3D
+    GL_TEXTURE_2D_ARRAY, // T2DArray
+    GL_TEXTURE_CUBE_MAP, // TCubemap
+};
+
+const ImageFormat GL_IMAGEFORMAT_MAP[] = {
+    // 8-bit int
+    {GL_R8, GL_RED, GL_UNSIGNED_BYTE, sizeof(uint8_t)},
+    {GL_RG8, GL_RG, GL_UNSIGNED_BYTE, sizeof(uint8_t)},
+    {GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE, sizeof(uint8_t)},
+    {GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, sizeof(uint8_t)},
+    // 16-bit float
+    {GL_R16F, GL_RED, GL_FLOAT, sizeof(float)},
+    {GL_RG16F, GL_RG, GL_FLOAT, sizeof(float)},
+    {GL_RGB16F, GL_RGB, GL_FLOAT, sizeof(float)},
+    {GL_RGBA16F, GL_RGBA, GL_FLOAT, sizeof(float)},
+};
+
+const GLenum GL_IMAGEFILTER_MAP[] = {
+    GL_NEAREST,              // Nearest
+    GL_LINEAR,               // Bilinear
+    GL_LINEAR_MIPMAP_LINEAR, // Trilinear
+    GL_LINEAR_MIPMAP_LINEAR, // Anisotropic
+};
+
 GLuint UploadBuffer(GLenum target, const void *data, size_t dataSize, GLenum usage)
 {
     GLuint buffer = 0;
@@ -32,13 +63,6 @@ GLuint UploadBuffer(GLenum target, const void *data, size_t dataSize, GLenum usa
 
     return buffer;
 }
-
-/// Map Mesh::Usage/Texture::Usage to OpenGL usage flags.
-static constexpr const GLenum GL_USAGE_MAP[] = {
-    GL_STATIC_DRAW,  // Static
-    GL_DYNAMIC_DRAW, // Dynamic
-    GL_STREAM_DRAW,  // Streaming
-};
 
 bool UploadMesh(const comp::Mesh &mesh, gl3::SharedMesh &gpuMesh)
 {
@@ -104,34 +128,6 @@ bool UploadMesh(const comp::Mesh &mesh, gl3::SharedMesh &gpuMesh)
     return true;
 }
 
-/// Map Texture::Format to OpenGL <internalFormat, format, input data type>.
-struct ImageFormat
-{
-    GLenum internalFormat;
-    GLenum format;
-    GLenum dtype;
-};
-static constexpr const ImageFormat GL_IMAGEFORMAT_MAP[] = {
-    // 8-bit int
-    {GL_R8, GL_RED, GL_UNSIGNED_BYTE},
-    {GL_RG8, GL_RG, GL_UNSIGNED_BYTE},
-    {GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE},
-    {GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE},
-    // 16-bit float
-    {GL_R16F, GL_RED, GL_FLOAT},
-    {GL_RG16F, GL_RG, GL_FLOAT},
-    {GL_RGB16F, GL_RGB, GL_FLOAT},
-    {GL_RGBA16F, GL_RGBA, GL_FLOAT},
-};
-
-/// Map Texture::Filter to OpenGL filtering modes.
-static constexpr const GLenum GL_IMAGEFILTER_MAP[] = {
-    GL_NEAREST,              // Nearest
-    GL_LINEAR,               // Bilinear
-    GL_LINEAR_MIPMAP_LINEAR, // Trilinear
-    GL_LINEAR_MIPMAP_LINEAR, // Anisotropic
-};
-
 bool UploadTexture(const comp::Texture &texture, gl3::SharedTexture &gpuTexture)
 {
     if(gpuTexture == 0)
@@ -141,28 +137,61 @@ bool UploadTexture(const comp::Texture &texture, gl3::SharedTexture &gpuTexture)
         BOYD_CHECK(gpuTexture != 0, "Failed to create texture")
     }
 
+    GLenum type = GL_TEXTURETYPE_MAP[texture.data->type];
     const auto &imgFormat = GL_IMAGEFORMAT_MAP[texture.data->format];
 
-    glBindTexture(GL_TEXTURE_2D, gpuTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0,
-                 imgFormat.internalFormat,
-                 texture.data->width, texture.data->height, 0,
-                 imgFormat.format,
-                 imgFormat.dtype,
-                 texture.data->pixels.data());
+    glBindTexture(type, gpuTexture);
+    switch(type)
+    {
+    case GL_TEXTURE_2D:
+        glTexImage2D(GL_TEXTURE_2D, 0,
+                     imgFormat.internalFormat,
+                     texture.data->width, texture.data->height, 0,
+                     imgFormat.format,
+                     imgFormat.dtype,
+                     texture.data->pixels.data());
+        break;
+    case GL_TEXTURE_2D_ARRAY:
+    case GL_TEXTURE_3D:
+        glTexImage3D(type, 0,
+                     imgFormat.internalFormat,
+                     texture.data->width, texture.data->height, texture.data->depth, 0,
+                     imgFormat.format,
+                     imgFormat.dtype,
+                     texture.data->pixels.data());
+        break;
+    case GL_TEXTURE_CUBE_MAP: {
+        const unsigned size = texture.data->width;
+        size_t stride = 0;
+        for(unsigned face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++)
+        {
+            glTexImage2D(face, 0,
+                         imgFormat.internalFormat,
+                         size, size, 0,
+                         imgFormat.format,
+                         imgFormat.dtype,
+                         texture.data->pixels.data());
+            stride += size * size * imgFormat.dtypeSize;
+        }
+    }
+    break;
+    default:
+        // !?
+        break;
+    }
 
     // (NOTE: might be required on Emscripten)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(type, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(type, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(type, GL_TEXTURE_MIN_FILTER, GL_IMAGEFILTER_MAP[texture.data->minFilter]);
+    glTexParameteri(type, GL_TEXTURE_MAG_FILTER, GL_IMAGEFILTER_MAP[texture.data->magFilter]);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_IMAGEFILTER_MAP[texture.data->minFilter]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_IMAGEFILTER_MAP[texture.data->magFilter]);
     if(texture.data->minFilter == comp::Texture::Trilinear || texture.data->minFilter == comp::Texture::Anisotropic)
     {
         glGenerateMipmap(gpuTexture);
     }
 
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(type, 0);
     return true;
 }
 
