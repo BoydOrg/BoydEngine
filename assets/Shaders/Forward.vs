@@ -1,6 +1,6 @@
 #version 300 es
-precision mediump float;
 // BoydEngine - Standard vertex shader - Forward rendering stage
+precision mediump float;
 
 uniform mat4 u_ModelViewProjection;
 

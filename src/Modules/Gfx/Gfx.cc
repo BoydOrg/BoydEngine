@@ -33,6 +33,8 @@ bool BoydGfxState::InitContext()
     BOYD_LOG(Debug, "Creating GLFW window");
 
     glfwWindowHint(GLFW_RESIZABLE, true);
+    // Use EGL to make ANGLE happy
+    glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
     // Request OpenGL ES 3
     glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -49,6 +51,11 @@ bool BoydGfxState::InitContext()
     glfwMakeContextCurrent(window);
 
     BOYD_LOG(Debug, "OpenGL: {} ({})", glGetString(GL_VERSION), glGetString(GL_VENDOR));
+
+#ifndef BOYD_PLATFORM_EMSCRIPTEN
+    // IMPORTANT: VSync as frame-limiter (esp. on Emscripten!!)
+    glfwSwapInterval(1);
+#endif
 
 #ifdef BOYD_GLES3_FLEXTGL
     if(!flextInit(window))
@@ -127,12 +134,11 @@ unsigned BoydGfxState::ApplyMaterialParams(const comp::Material &material, gl3::
     for(const auto &param : material.parameters)
     {
         uniformName = fmt::format(FMT_STRING("u_{}"), param.first);
-        auto uniformLocIt = program.uniforms.find(uniformName);
-        if(uniformLocIt == program.uniforms.end())
+        GLint uniformLoc = program.uniformLocation(uniformName);
+        if(uniformLoc < 0)
         {
             continue;
         }
-        GLint uniformLoc = uniformLocIt->second;
 
         switch(param.second.index())
         {
@@ -201,7 +207,7 @@ void BoydGfxState::Update()
         switch(camera.mode)
         {
         case comp::Camera::Persp:
-            projMtx = glm::perspectiveFov(camera.fov, screenSize.x, screenSize.y, camera.zNear, camera.zFar);
+            projMtx = glm::perspective(camera.fov, screenSize.x / screenSize.y, camera.zNear, camera.zFar);
             break;
         default: // comp::Camera::Ortho
             if(glm::isinf(camera.zNear) || glm::isinf(camera.zFar))
@@ -249,7 +255,7 @@ void BoydGfxState::Update()
                 unsigned nTexturesNow = ApplyMaterialParams(material, stage.program);
 
                 glm::mat4 mvpMtx = viewProjectionMtx * transform.matrix;
-                glUniformMatrix4fv(stage.program.uniforms["u_ModelViewProjection"], 1, false, &mvpMtx[0][0]);
+                glUniformMatrix4fv(stage.program.uniformLocation("u_ModelViewProjection"), 1, false, &mvpMtx[0][0]);
 
                 // Unbind all textures that would be unused this drawcall
                 for(unsigned i = nTextures; i > nTexturesNow; i--)

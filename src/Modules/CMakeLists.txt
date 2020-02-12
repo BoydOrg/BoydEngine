@@ -47,10 +47,12 @@ macro(boyd_module)
 	    -DBOYD_DLL_EXPORTS
     )
     target_include_directories(${_BOYD_MODULE_NAME} BEFORE PUBLIC
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        $<TARGET_FILE_DIR:BoydEngine>
         ${_BOYD_MODULE_INCLUDES}
         # NOTE: Include all include directories of the parent executable
         $<TARGET_PROPERTY:BoydEngine,INCLUDE_DIRECTORIES>
+        # NOTE: Include <builddir>/src/ to find BoydBuildUtil.hh
+        "${PROJECT_BINARY_DIR}/src/"
     ) 
     target_link_libraries(${_BOYD_MODULE_NAME} PUBLIC
         ${_BOYD_MODULE_LINKS}
@@ -63,21 +65,23 @@ macro(boyd_module)
     if (BOYD_HOT_RELOADING)
         target_link_libraries(${_BOYD_MODULE_NAME} PUBLIC ${PROJECT_NAME})
     else()
-        # Fixes compilation error "BoydBuildConfig.hh not found"
-        target_include_directories(${_BOYD_MODULE_NAME} PUBLIC
-            "${CMAKE_CURRENT_BINARY_DIR}/../"
-        )
-        target_link_libraries(${PROJECT_NAME} PUBLIC ${_BOYD_MODULE_NAME})
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${_BOYD_MODULE_NAME})
     endif()
 endmacro()
 
+if(WIN32)
+    # Required for htonl and friends
+    set(INET_LIB ws2_32)
+else()
+    set(INET_LIB "")
+endif()
 # ------------------------------------------------------------------------------
 
 
 boyd_module(NAME AssetLoader PRIORITY 1
     SOURCES AssetLoader/AssetLoader.cc
             AssetLoader/Loaders/AllLoaders.cc
-    LINKS tinygltf
+    LINKS tinygltf ${INET_LIB}
 )
 
 boyd_module(NAME Scripting PRIORITY 2
@@ -101,7 +105,6 @@ boyd_module(NAME Gfx PRIORITY 99
 )
 
 # ------------------------------------------------------------------------------
-#include "Glfw.hh"
 set(BOYD_MODULES_MACRO "")
 foreach(BOYD_MODULE ${BOYD_MODULES})
     set(BOYD_MODULES_MACRO "${BOYD_MODULES_MACRO} \\\n ${BOYD_MODULE}")

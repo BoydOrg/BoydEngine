@@ -1,6 +1,6 @@
 #version 300 es
-precision mediump float;
 // BoydEngine - Standard fragment shader - Forward rendering stage
+precision mediump float;
 
 uniform sampler2D u_DiffuseMap;
 
