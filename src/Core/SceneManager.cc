@@ -7,6 +7,7 @@
 #include "../Components/Camera.hh"
 #include "../Components/ComponentLoadRequest.hh"
 #include "../Components/Gltf.hh"
+#include "../Components/LuaBehaviour.hh"
 #include "../Components/Material.hh"
 #include "../Components/Mesh.hh"
 #include "../Components/Skybox.hh"
@@ -30,11 +31,4 @@ void boyd::SceneManager::LoadScene(const std::filesystem::path &scene)
     // Just instantiate random stuff
     /// The camera is instantiated in scripts/main.lua now :)
 
-    auto testCube = registry.create();
-    registry.assign<boyd::comp::Transform>(testCube, glm::translate(glm::identity<glm::mat4>(), glm::vec3{0.0f, 0.0f, -3.0f}));
-
-    boyd::comp::ComponentLoadRequest cubeReq{
-        {boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::Gltf>(), "assets/GLTF/TexturedCube.glb"},
-    };
-    registry.assign<boyd::comp::ComponentLoadRequest>(testCube, std::move(cubeReq));
 }

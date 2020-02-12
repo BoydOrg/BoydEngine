@@ -270,6 +270,18 @@ struct LuaInput
     }
 };
 
+struct LuaTime
+{
+    /// Sleep for a number of milliseconds
+    /// Lua arguments:
+    /// - `self`: LuaEntity
+    /// - `msec`: int - the amount of milliseconds to wait for
+    static void SleepFor(lua_State *L)
+    {
+        lua_settop(L, 1);
+    }
+};
+
 // ---------------------------------------------------------------------------------------------------------------------
 #ifdef DEBUG
 
@@ -321,7 +333,7 @@ void RegisterAllLuaTypes(BoydScriptingState *state)
 
     // Then register `LuaEntity`
     // clang-format off
-    ns = ns.beginClass<LuaEntity>("Entity")
+    ns = ns.beginClass<LuaEntity>("entity")
         .addStaticCFunction("create", &LuaEntity::LuaCreateEntity)
         .addStaticCFunction("get", &LuaEntity::LuaGetEntity)
         .addStaticCFunction("destroy", &LuaEntity::LuaDestroyEntity)
@@ -335,14 +347,20 @@ void RegisterAllLuaTypes(BoydScriptingState *state)
 
     // Input bindings
     // clang-format off
-    ns = ns.beginNamespace("Input")
-        .addFunction("getAxis", &LuaInput::getAxis)
+    ns = ns.beginNamespace("input")
+        .addFunction("get_axis", &LuaInput::getAxis)
     .endNamespace();
 
     // clang-format on
 
     RegisterGLM(ns);
-    ns.endNamespace();
+
+    // clang-format off
+    // ns = ns.beginClass<LuaTime>("time");
+
+    // clang-format on
+
+    ns = ns.endNamespace();
 }
 
 } // namespace boyd

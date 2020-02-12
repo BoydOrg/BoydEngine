@@ -15,7 +15,7 @@ struct BOYD_API LuaBehaviour
     std::string source;
     std::string description;
 
-    LuaBehaviour(std::string value, std::string description = "")
+    LuaBehaviour(std::string value)
         : source{value}
     {
     }
