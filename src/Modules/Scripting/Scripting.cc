@@ -1,6 +1,9 @@
 #include "Scripting.hh"
 
+#include "../../Components/ComponentLoadRequest.hh"
+#include "../../Components/Gltf.hh"
 #include "../../Components/LuaBehaviour.hh"
+#include "../../Components/Transform.hh"
 #include "../../Core/GameState.hh"
 #include "../../Core/Platform.hh"
 #include "../../Debug/Log.hh"
@@ -100,6 +103,7 @@ BoydScriptingState::BoydScriptingState()
     BOYD_LOG(Debug, "Registering Lua bindings");
     boyd::RegisterAllLuaTypes(this);
 
+    /*
     BOYD_LOG(Debug, "Loading {}", MAIN_SCRIPT);
     luaL_dofile(L, MAIN_SCRIPT);
     const char *luaError = lua_tostring(L, -1);
@@ -107,6 +111,7 @@ BoydScriptingState::BoydScriptingState()
     {
         BOYD_LOG(Error, "Lua error: {}", luaError);
     }
+    */
 
     BOYD_LOG(Debug, "Lua initialized");
 
@@ -138,34 +143,35 @@ extern "C" {
 BOYD_API void *BoydInit_Scripting()
 {
     BOYD_LOG(Info, "Starting scripting module");
-    return new boyd::BoydScriptingState();
+    auto *state = new boyd::BoydScriptingState();
+    auto &registry = Boyd_GameState()->ecs;
+
+    auto root = registry.create();
+    boyd::comp::ComponentLoadRequest luascript{{boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::LuaBehaviour>(),
+                                                "scripts/main.lua"}};
+
+    registry.assign<boyd::comp::ComponentLoadRequest>(root, std::move(luascript));
+
+    auto testCube = registry.create();
+    registry.assign<boyd::comp::Transform>(testCube, glm::translate(glm::identity<glm::mat4>(), glm::vec3{0.0f, 0.0f, -3.0f}));
+
+    boyd::comp::ComponentLoadRequest cubeReq{
+        {boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::Gltf>(), "assets/GLTF/TexturedCube.glb"},
+    };
+    registry.assign<boyd::comp::ComponentLoadRequest>(testCube, std::move(cubeReq));
+
+    return state;
 }
 
 BOYD_API void BoydUpdate_Scripting(void *statePtr)
 {
     auto *state = GetState(statePtr);
-    // Call the update function in the main script, if any
-    /*
-    luabridge::LuaRef updateFunc = luabridge::getGlobal(state->L, boyd::UPDATE_FUNC_NAME);
-    if(updateFunc.isFunction())
-    {
-        try
-        {
-            updateFunc();
-        }
-        catch(luabridge::LuaException &e)
-        {
-            BOYD_LOG(Error, "{}", e.what());
-        }
-    }
-    */
-
     auto &registry = Boyd_GameState()->ecs;
     for(auto entity : state->observer)
     {
         BOYD_LOG(Info, "Detected new script in ECS, building");
         auto &comp = registry.get<boyd::comp::LuaBehaviour>(entity);
-        auto &internal = registry.assign_or_replace<boyd::comp::LuaInternals>(entity, comp, state->L, state->idCounter++);
+        auto &internal = registry.assign_or_replace<boyd::comp::LuaInternals>(entity, comp, state->L, entity);
     }
 
     state->observer.clear();
@@ -180,15 +186,8 @@ BOYD_API void BoydHalt_Scripting(void *statePtr)
     BOYD_LOG(Info, "Halting scripting module");
 
     auto *state = GetState(statePtr);
-    // Call the halt function in the main script, if any.
-    // (notice the inner scope to ensure `~LuaRef()` is called!)
-    {
-        luabridge::LuaRef haltFunc = luabridge::getGlobal(state->L, boyd::HALT_FUNC_NAME);
-        if(haltFunc.isFunction())
-        {
-            haltFunc();
-        }
-    }
+    /// Call the halt method of each LuaInternal
+    Boyd_GameState()->ecs.view<boyd::comp::LuaInternals>().each([state](auto &l) { l.Halt(state->L); });
 
     delete GetState(state);
 }

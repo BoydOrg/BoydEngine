@@ -1,11 +1,15 @@
 #pragma once
 
 #include "../../Components/LuaBehaviour.hh"
+#include "../../Debug/Log.hh"
 #include "Lua.hh"
 
 #include <chrono>
+#include <entt/entt.hpp>
 #include <fmt/format.h>
 #include <string>
+
+using namespace std::chrono;
 
 namespace boyd
 {
@@ -28,8 +32,11 @@ struct BOYD_API LuaInternals
     std::string scriptPath;
     std::string scriptIdentifier;
 
-    LuaInternals(const boyd::comp::LuaBehaviour &behaviour, lua_State *L, int scriptref)
-        : scriptPath{behaviour.description}, scriptIdentifier{fmt::format(FMT_STRING("luascript#{}"), scriptref)}
+    high_resolution_clock::time_point sleepTime;
+    milliseconds sleepAmount;
+
+    LuaInternals(const boyd::comp::LuaBehaviour &behaviour, lua_State *L, entt::entity scriptref)
+        : scriptPath{behaviour.description}, scriptIdentifier{fmt::format(FMT_STRING("{}"), scriptref)}
     {
         //lua_pushfstring(L, "@%s", scriptPath.c_str());
         //lua_pushfstring(L, "=stdin");
@@ -76,49 +83,39 @@ struct BOYD_API LuaInternals
     void Update(lua_State *L)
     {
         // Retrieve the table containing the functions of the chunk
-        lua_getfield(L, LUA_REGISTRYINDEX, scriptIdentifier.c_str());
         lua_pushstring(L, scriptPath.c_str());
         lua_setglobal(L, GLOBAL_SCRIPT_IDENTIFIER);
-        //Get the function we want to call
-        luabridge::setGlobal(L, GLOBAL_SCRIPT_IDENTIFIER, scriptIdentifier.c_str());
-        ;
-
-        auto updateFunc = luabridge::getGlobal(L, "update");
-        if(updateFunc.isFunction())
+        /// Try to call the update function, if any. Catch any error.
+        try
         {
-            try
-            {
-                updateFunc();
-            }
-            catch(luabridge::LuaException &e)
-            {
-                BOYD_LOG(Error, "Exception in script {} while halting: {}", scriptPath, e.what());
-            }
+            lua_getfield(L, LUA_REGISTRYINDEX, scriptIdentifier.c_str());
+            lua_getfield(L, -1, UPDATE_FUNC_NAME);
+            lua_call(L, 0, 0);
+        }
+        catch(luabridge::LuaException &e)
+        {
+            BOYD_LOG(Error, "{}{}", scriptPath, e.what() + 31);
         }
     }
 
     // Call the halt method, if it exists
     void Halt(lua_State *L)
     {
-        lua_getfield(L, LUA_REGISTRYINDEX, scriptIdentifier.c_str());
         lua_pushstring(L, scriptPath.c_str());
         lua_setglobal(L, GLOBAL_SCRIPT_IDENTIFIER);
-
-        auto haltFunc = luabridge::getGlobal(L, HALT_FUNC_NAME);
-        if(haltFunc.isFunction())
+        /// Try to call the halt function, if any. Catch any error.
+        try
         {
-            try
-            {
-                haltFunc();
-            }
-            catch(luabridge::LuaException &e)
-            {
-                BOYD_LOG(Error, "Exception in script {} while halting: {}", scriptPath, e.what());
-            }
+            lua_getfield(L, LUA_REGISTRYINDEX, scriptIdentifier.c_str());
+            lua_getfield(L, -1, HALT_FUNC_NAME);
+            lua_call(L, 0, 0);
         }
-
-        lua_call(L, 0, 0);
+        catch(luabridge::LuaException &e)
+        {
+            BOYD_LOG(Error, "{}{}", scriptPath, e.what() + 31);
+        }
     }
 };
 } // namespace comp
+
 } // namespace boyd
