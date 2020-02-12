@@ -234,9 +234,9 @@ BOYD_API void BoydUpdate_AssetLoader(void *statePtr)
         gameState->ecs.remove<boyd::comp::ComponentLoadRequest>(entity);
     });
 
-#ifndef BOYD_HOT_RELOADING
-    // If no hot
-    state->DoOne(false);
+#ifdef BOYD_SINGLE_THREADED
+    // If not multithreaded, need to load the asset somewhere...
+    state->DoOne(true);
 #endif
 
     // Then, for each asset that was loaded, attach it to the right entity in the ECS

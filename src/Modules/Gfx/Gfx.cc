@@ -33,6 +33,8 @@ bool BoydGfxState::InitContext()
     BOYD_LOG(Debug, "Creating GLFW window");
 
     glfwWindowHint(GLFW_RESIZABLE, true);
+    // Use EGL to make ANGLE happy
+    glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
     // Request OpenGL ES 3
     glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);

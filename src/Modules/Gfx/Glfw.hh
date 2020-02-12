@@ -4,9 +4,10 @@
 
 // NOTE: Must include flextGL (or the other GL header/loaders) *before* GLFW!
 #if defined(BOYD_PLATFORM_WIN32)
-//   Windows: Use ANGLE to get GLES3
+//   Windows: Use ANGLE's libEGL and libGLESv2
 #    define BOYD_GLES3_ANGLE
-//   FIXME IMPLEMENT: Include ANGLE headers!
+#    include <GLES3/gl3.h>
+#    include <EGL/egl.h>
 #elif defined(BOYD_PLATFORM_EMSCRIPTEN)
 //   Emscripten: Use builtin headers
 #    define BOYD_GLES3_EMSCRIPTEN

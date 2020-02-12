@@ -1,5 +1,9 @@
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+
 # Make sure all libraries are -fPIC
 set(CMAKE_POSITION_INDEPENDENT_CODE YES)
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 # EnTT - https://github.com/skypjack/entt - License: MIT
 add_subdirectory(entt/)
