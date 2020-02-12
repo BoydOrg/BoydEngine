@@ -32,10 +32,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 {
     BOYD_LOG(Debug, "BoydEngine v{}.{}", BOYD_VERSION_MAJOR, BOYD_VERSION_MINOR);
 
-    BOYD_MODULES_LIST();
-
     // Make sure game state is inited
     (void)GameStateManager::Instance();
+
+    BOYD_MODULES_LIST();
+
     (void)SceneManager::Instance();
 
 #ifdef BOYD_HOT_RELOADING

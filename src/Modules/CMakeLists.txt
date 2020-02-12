@@ -73,16 +73,16 @@ endmacro()
 
 # ------------------------------------------------------------------------------
 
-boyd_module(NAME Scripting PRIORITY 1
-    SOURCES Scripting/Scripting.cc Scripting/Registrar.cc Scripting/3rdparty.cc
-    LINKS LuaBridge ${BOYD_LUA}
-)
 
-
-boyd_module(NAME AssetLoader PRIORITY 2
+boyd_module(NAME AssetLoader PRIORITY 1
     SOURCES AssetLoader/AssetLoader.cc
             AssetLoader/Loaders/AllLoaders.cc
     LINKS tinygltf
+)
+
+boyd_module(NAME Scripting PRIORITY 2
+    SOURCES Scripting/Scripting.cc Scripting/Registrar.cc Scripting/3rdparty.cc
+    LINKS LuaBridge ${BOYD_LUA}
 )
 
 boyd_module(NAME Physics PRIORITY 10
