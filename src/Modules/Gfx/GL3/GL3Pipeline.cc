@@ -15,6 +15,7 @@ struct ShaderPaths
 };
 /// Shader filepaths, indexed by pipeline step...
 static constexpr const ShaderPaths SHADERS_PATHS[] = {
+    {"assets/Shaders/Background.vs", "assets/Shaders/Background.fs"},
     {"assets/Shaders/Forward.vs", "assets/Shaders/Forward.fs"},
 };
 

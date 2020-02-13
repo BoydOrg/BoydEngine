@@ -1,5 +1,5 @@
 #version 300 es
-// BoydEngine - Standard vertex shader - Skybox
+// BoydEngine - Standard vertex shader - Background rendering stage (-> Skybox)
 precision mediump float;
 
 uniform mat4 u_ModelViewProjection;

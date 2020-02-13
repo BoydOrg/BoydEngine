@@ -242,34 +242,48 @@ void BoydGfxState::Update()
         // -------------------------------------------------------------------------------------------------------------
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
-        auto &stage = pipeline->stages[gl3::Pipeline::Forward];
-
-        glUseProgram(stage.program);
+        glDepthFunc(GL_LEQUAL); // (helps with the skybox, that has Z_NDC=1)
 
         unsigned nTextures = 0; // Number of textures bound the previous drawcall
-        gameState->ecs.view<comp::Transform, comp::Mesh, comp::Material>()
-            .each([&](auto entity, const comp::Transform &transform, const comp::Mesh &mesh, const comp::Material &material) {
-                const auto gpuMesh = MapGpuMesh(mesh);
 
-                // Apply uniforms + bind the textures needed for this drawcall
-                // (uploads textures to VRAM if they weren't already there)
-                unsigned nTexturesNow = ApplyMaterialParams(material, stage.program);
+        {
+            auto &stage = pipeline->stages[gl3::Pipeline::Background];
+            glUseProgram(stage.program);
 
-                glm::mat4 mvpMtx = viewProjectionMtx * transform.matrix;
-                glUniformMatrix4fv(stage.program.uniformLocation("u_ModelViewProjection"), 1, false, &mvpMtx[0][0]);
-
-                // Unbind all textures that would be unused this drawcall
-                for(unsigned i = nTextures; i > nTexturesNow; i--)
-                {
-                    glActiveTexture(GL_TEXTURE0 + i - 1);
-                    glBindTexture(GL_TEXTURE_2D, 0);
-                }
-                nTextures = nTexturesNow;
-
-                // Bind VBO+IBO and render
-                glBindVertexArray(gpuMesh.vao);
-                glDrawElements(GL_TRIANGLES, mesh.data->indices.size(), GL_UNSIGNED_INT, nullptr);
+            gameState->ecs.view<comp::Skybox, comp::Material>().each([&](auto entity, const comp::Skybox &skybox, const comp::Material &material) {
+                // FIXME Bind cube mesh
+                // FIXME Draw skybox with a MVP that is (projection * only_rotation_of(view))
+                nTextures = ApplyMaterialParams(material, stage.program);
             });
+        }
+        {
+            auto &stage = pipeline->stages[gl3::Pipeline::Forward];
+            glUseProgram(stage.program);
+
+            gameState->ecs.view<comp::Transform, comp::Mesh, comp::Material>()
+                .each([&](auto entity, const comp::Transform &transform, const comp::Mesh &mesh, const comp::Material &material) {
+                    const auto gpuMesh = MapGpuMesh(mesh);
+
+                    // Apply uniforms + bind the textures needed for this drawcall
+                    // (uploads textures to VRAM if they weren't already there)
+                    unsigned nTexturesNow = ApplyMaterialParams(material, stage.program);
+
+                    glm::mat4 mvpMtx = viewProjectionMtx * transform.matrix;
+                    glUniformMatrix4fv(stage.program.uniformLocation("u_ModelViewProjection"), 1, false, &mvpMtx[0][0]);
+
+                    // Unbind all textures that would be unused this drawcall
+                    for(unsigned i = nTextures; i > nTexturesNow; i--)
+                    {
+                        glActiveTexture(GL_TEXTURE0 + i - 1);
+                        glBindTexture(GL_TEXTURE_2D, 0);
+                    }
+                    nTextures = nTexturesNow;
+
+                    // Bind VBO+IBO and render
+                    glBindVertexArray(gpuMesh.vao);
+                    glDrawElements(GL_TRIANGLES, mesh.data->indices.size(), GL_UNSIGNED_INT, nullptr);
+                });
+        }
 
         glBindVertexArray(0);
         glUseProgram(0);

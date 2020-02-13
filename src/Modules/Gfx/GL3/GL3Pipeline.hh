@@ -12,7 +12,8 @@ struct Pipeline
 {
     enum Stages : unsigned
     {
-        Forward = 0, ///< Forward rendering + lighting.
+        Background = 0, ///< Background clear, skybox.
+        Forward = 1,    ///< Forward rendering + lighting.
         _Last = Forward,
     };
     struct Stage

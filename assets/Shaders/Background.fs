@@ -1,5 +1,5 @@
 #version 300 es
-// BoydEngine - Standard fragment shader - Skybox
+// BoydEngine - Standard fragment shader - Background rendering stage (-> Skybox)
 precision highp float;
 
 uniform samplerCube u_EnvMap;
