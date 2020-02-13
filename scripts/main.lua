@@ -33,7 +33,7 @@ print('testing scripts')
 local luabehaviour_comp = ent2:comp('LuaBehaviour')
 local component_load_request_comp = ent2:comp('ComponentLoadRequest')
 local component = boyd.ComponentLoadRequest()
-component:add(luabehaviour_comp.id, "scripts/test.lua")
+component:add(luabehaviour_comp.typeid, "scripts/test.lua")
 component_load_request_comp:set(component)
 
 print("Done")

@@ -187,8 +187,8 @@ static int LuaCreateCompRef(lua_State *L)
     lua_pushcfunction(L, (&LuaRemoveComponent<TComponent>));
     lua_setfield(L, -2, "remove");
 
-    lua_pushcfunction(L, (&LuaGetComponentId<TComponent>));
-    lua_setfield(L, -2, "id");
+    lua_pushinteger(L, comp::ComponentLoadRequest::TypeOf<TComponent>());
+    lua_setfield(L, -2, "typeid");
     return 1;
 }
 
