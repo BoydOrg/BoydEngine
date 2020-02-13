@@ -8,10 +8,10 @@ namespace comp
 {
 
 /// A renderable skybox.
-/// Must be attached to the same entity with the `Camera` & `MainCamera` to work!
+/// This is a "virtual component"; attach a `ComponentLoadRequest<comp::Skybox>`
+/// (pointing to the directory containing the skybox HDRs) for it to be loaded.
 struct BOYD_API Skybox
 {
-    // TODO IMPLEMENT
 };
 
 } // namespace comp

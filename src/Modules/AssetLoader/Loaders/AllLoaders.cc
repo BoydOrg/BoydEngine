@@ -6,6 +6,7 @@
 #include "AudioClip.hh"
 #include "Gltf.hh"
 #include "LuaBehaviour.hh"
+#include "Skybox.hh"
 #include "String.hh"
 
 namespace boyd
