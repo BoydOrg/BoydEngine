@@ -1,13 +1,16 @@
 #include "Registrar.hh"
+#include "3rdparty.hh"
+#include "LuaInternals.hh"
 
+#include "../../Components/AllTypes.hh"
 #include "../../Core/GameState.hh"
 #include "../../Debug/Log.hh"
+
+#include "../../Components/ComponentLoadRequest.hh"
+
 #include <fmt/format.h>
 #include <string>
 #include <unordered_map>
-
-#include "../../Components/AllTypes.hh"
-#include "3rdparty.hh"
 
 // NOTE: The "LuaEntity" mentioned below is a Lua table type that contains:
 // - entity: boyd::EntityId - The id of the entity
@@ -66,6 +69,20 @@ static int LuaGetComponent(lua_State *L)
     return 1;
 }
 
+/// LuaStaticCFunction wrapper to get EnTT's hashed key of the original type.
+/// This can and should be used for making a ComponentLoadRequest as the latter
+/// requires the name of the component.
+/// Lua args: none
+/// Lua returns: an int that corresponds to entt::type_info<T>::i
+template <typename TComponent>
+static int LuaGetComponentId(lua_State *L)
+{
+    lua_settop(L, 1); // Discard all arguments
+
+    luabridge::Stack<ENTT_ID_TYPE>::push(L, boyd::comp::ComponentLoadRequest::TypeOf<TComponent>());
+    return 1;
+}
+
 /// LuaCFunction wrapper for EnTT's assign_or_replace()
 /// Lua args:
 /// - self: LuaEntity
@@ -88,7 +105,34 @@ static int LuaSetComponent(lua_State *L)
         luabridge::Stack<std::string>::push(L, fmt::format(FMT_STRING("Entity {} is invalid"), entId));
         return 2;
     }
-    gameState->ecs.assign_or_replace<TComponent>(entity, luabridge::Stack<TComponent>::get(L, 2));
+    auto res = gameState->ecs.assign_or_replace<TComponent>(entity, luabridge::Stack<TComponent>::get(L, 2));
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+/// LuaCFunction wrapper for EnTT's assign_or_replace()
+/// Lua args:
+/// - self: LuaEntity
+/// - comp: TComponent - The component to assign/replace for `self.entity`
+/// Lua returns:
+/// - true or (nil, string) on error
+template <>
+int LuaSetComponent<comp::ComponentLoadRequest>(lua_State *L)
+{
+    lua_settop(L, 2);                 // Discard all arguments except 2 (self, comp)
+    luaL_checktype(L, 1, LUA_TTABLE); // Ensure first argument is a table
+    lua_getfield(L, 1, "entity");     // <-- Get `self.entity` --v
+    EntityId entId = luabridge::Stack<EntityId>::get(L, -1);
+    entt::entity entity{entId};
+
+    auto *gameState = Boyd_GameState();
+    if(!gameState->ecs.valid(entity))
+    {
+        lua_pushnil(L);
+        luabridge::Stack<std::string>::push(L, fmt::format(FMT_STRING("Entity {} is invalid"), entId));
+        return 2;
+    }
+    auto res = gameState->ecs.assign_or_replace<comp::ComponentLoadRequest>(entity, std::move(luabridge::Stack<comp::ComponentLoadRequest>::get(L, 2)));
     lua_pushboolean(L, true);
     return 1;
 }
@@ -143,6 +187,8 @@ static int LuaCreateCompRef(lua_State *L)
     lua_pushcfunction(L, (&LuaRemoveComponent<TComponent>));
     lua_setfield(L, -2, "remove");
 
+    lua_pushcfunction(L, (&LuaGetComponentId<TComponent>));
+    lua_setfield(L, -2, "id");
     return 1;
 }
 
@@ -260,6 +306,30 @@ struct LuaEntity
     {
         return fmt::format(FMT_STRING("Entity({})"), id);
     }
+
+    /// Get the entity id of the caller
+    /// Lua args:
+    /// (none)
+    /// Lua returns:
+    /// LuaEntity or (nil, error_string) if the script is not attached to a valid entity
+    static int GetSelf(lua_State *L)
+    {
+        lua_settop(L, 0); // discard everything
+        auto idRef = luabridge::getGlobal(L, GLOBAL_ENTITY_IDENTIFIER);
+        // If the global exists, is not being accidentally cast to a string and its value is a valid entity...
+        if(!idRef.isString() && idRef.isNumber())
+        {
+            LuaEntity luaEntity{EntityId{idRef.cast<uint32_t>()}};
+            if(luaEntity.IsValid())
+            {
+                luabridge::Stack<LuaEntity>::push(L, luaEntity);
+                return 1;
+            }
+        }
+        lua_pushnil(L);
+        luabridge::Stack<std::string>::push(L, "Script not attached to an entity");
+        return 1;
+    }
 };
 
 struct LuaInput
@@ -276,9 +346,29 @@ struct LuaTime
     /// Lua arguments:
     /// - `self`: LuaEntity
     /// - `msec`: int - the amount of milliseconds to wait for
-    static void SleepFor(lua_State *L)
+    /// Lua returns:
+    /// nil, and as a side effect yields the thread if successful, or (nil, error_string) otherwise
+    static int SleepFor(lua_State *L)
     {
-        lua_settop(L, 1);
+        lua_settop(L, 1); // take only "time" argument.
+        int sleep = luabridge::Stack<uint32_t>::get(L, 1);
+        if(sleep >= 0)
+        {
+            // get the LuaInternals component and update its sleep count
+            auto idRef = luabridge::getGlobal(L, GLOBAL_ENTITY_IDENTIFIER);
+            EntityId entity = idRef.cast<EntityId>();
+            auto &internals = Boyd_GameState()->ecs.get<boyd::comp::LuaInternals>(entt::entity{entity});
+            internals.sleepAmount = milliseconds(sleep);
+            internals.sleepTime = high_resolution_clock::now();
+            lua_yield(L, 0);
+            return 1;
+        }
+        else
+        {
+            lua_pushnil(L);
+            lua_pushstring(L, "sleep time must be non-negative");
+            return 1;
+        }
     }
 };
 
@@ -341,6 +431,11 @@ void RegisterAllLuaTypes(BoydScriptingState *state)
         .addFunction("isvalid", &LuaEntity::IsValid)
         .addFunction("__tostring", &LuaEntity::ToString)
         .addProperty("id", &LuaEntity::id, false)
+        .addStaticCFunction("this", &LuaEntity::GetSelf)
+    .endClass();
+
+     ns = ns.beginClass<LuaTime>("time")
+        .addStaticCFunction("sleep", &LuaTime::SleepFor)
     .endClass();
 
     // clang-format on

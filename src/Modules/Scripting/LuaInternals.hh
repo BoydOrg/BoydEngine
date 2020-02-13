@@ -19,28 +19,31 @@ namespace boyd
 /// but Lua does black magic(tm) and ignores that. Unfortunately I did not have the time and will to investigate.
 static constexpr const char *GLOBAL_SCRIPT_IDENTIFIER = "_boyd_script_path";
 
+/// The name of the global variable that stores the entity of the script component.
+static constexpr const char *GLOBAL_ENTITY_IDENTIFIER = "_boyd_entity";
+
 /// The name of the update function defined in the script; it is executed every update of the scripting module.
 static constexpr const char *UPDATE_FUNC_NAME = "update";
 
 /// The name of the update function defined in the script; it is executed when the scripting module is halted.
 static constexpr const char *HALT_FUNC_NAME = "halt";
 
+using EntityId = uint32_t;
+
 namespace comp
 {
 struct BOYD_API LuaInternals
 {
     std::string scriptPath;
+    EntityId entity;
     std::string scriptIdentifier;
 
-    high_resolution_clock::time_point sleepTime;
-    milliseconds sleepAmount;
+    high_resolution_clock::time_point sleepTime{};
+    milliseconds sleepAmount{milliseconds::zero()};
 
     LuaInternals(const boyd::comp::LuaBehaviour &behaviour, lua_State *L, entt::entity scriptref)
-        : scriptPath{behaviour.description}, scriptIdentifier{fmt::format(FMT_STRING("{}"), scriptref)}
+        : scriptPath{behaviour.description}, entity{EntityId(scriptref)}, scriptIdentifier{fmt::format(FMT_STRING("{}"), scriptref)}
     {
-        //lua_pushfstring(L, "@%s", scriptPath.c_str());
-        //lua_pushfstring(L, "=stdin");
-        //lua_pushstring(L, "test.lua");
         switch(luaL_loadstring(L, behaviour.source.c_str()))
         {
         case LUA_OK:
@@ -61,9 +64,7 @@ struct BOYD_API LuaInternals
             // set the upvalue (_ENV)
             lua_setupvalue(L, 1, 1);
 
-            /// HACK(Enrico): push the string name so that it is available as a variable inside lua.
-            lua_pushstring(L, scriptPath.c_str());
-            lua_setglobal(L, GLOBAL_SCRIPT_IDENTIFIER);
+            PushGlobals(L);
             lua_pcall(L, 0, LUA_MULTRET, 0);
 
             break;
@@ -79,30 +80,57 @@ struct BOYD_API LuaInternals
         }
     }
 
+    ~LuaInternals()
+    {
+        BOYD_LOG(Info, "Goodbye");
+    }
+
     /// Call the Halt method, if it exists
     void Update(lua_State *L)
     {
-        // Retrieve the table containing the functions of the chunk
-        lua_pushstring(L, scriptPath.c_str());
-        lua_setglobal(L, GLOBAL_SCRIPT_IDENTIFIER);
+        /// If enough time has passed, continue the thread
+        if(sleepAmount > milliseconds::zero() && duration_cast<milliseconds>(high_resolution_clock::now() - sleepTime) > sleepAmount)
+            sleepAmount = milliseconds::zero();
+
+        /// Else yield
+        if(sleepAmount > milliseconds::zero())
+            return;
+
+        PushGlobals(L);
+
         /// Try to call the update function, if any. Catch any error.
         try
         {
             lua_getfield(L, LUA_REGISTRYINDEX, scriptIdentifier.c_str());
             lua_getfield(L, -1, UPDATE_FUNC_NAME);
-            lua_call(L, 0, 0);
+            if(lua_isnil(L, -1))
+            {
+                BOYD_LOG(Debug, "This is NIL!");
+            }
+#ifdef BOYD_LUA_JIT
+            switch(::lua_resume(L, 0))
+#else
+            int nres[10]; // a conveniently large buffer
+            switch(::lua_resume(L, nullptr, 0, nres))
+#endif
+            {
+            case LUA_ERRRUN:
+                BOYD_LOG(Error, "{} - {}", scriptPath, lua_tostring(L, -1));
+                lua_pop(L, -1);
+                lua_resetthread(L);
+                break;
+            }
         }
         catch(luabridge::LuaException &e)
         {
-            BOYD_LOG(Error, "{}{}", scriptPath, e.what() + 31);
+            BOYD_LOG(Error, "{} - {}", scriptPath, e.what());
         }
     }
 
     // Call the halt method, if it exists
     void Halt(lua_State *L)
     {
-        lua_pushstring(L, scriptPath.c_str());
-        lua_setglobal(L, GLOBAL_SCRIPT_IDENTIFIER);
+        PushGlobals(L);
         /// Try to call the halt function, if any. Catch any error.
         try
         {
@@ -112,8 +140,19 @@ struct BOYD_API LuaInternals
         }
         catch(luabridge::LuaException &e)
         {
-            BOYD_LOG(Error, "{}{}", scriptPath, e.what() + 31);
+            BOYD_LOG(Error, "{}{}", scriptPath, e.what());
         }
+    }
+
+private:
+    /// HACK(Enrico): push the string name so that it is available as a variable inside lua.
+    /// Also make the entity id available too.
+    void PushGlobals(lua_State *L)
+    {
+        lua_pushstring(L, scriptPath.c_str());
+        lua_setglobal(L, GLOBAL_SCRIPT_IDENTIFIER);
+        lua_pushinteger(L, static_cast<uint32_t>(entity));
+        lua_setglobal(L, GLOBAL_ENTITY_IDENTIFIER);
     }
 };
 } // namespace comp

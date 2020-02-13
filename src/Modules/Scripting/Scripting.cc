@@ -148,8 +148,7 @@ BOYD_API void *BoydInit_Scripting()
 
     auto root = registry.create();
     boyd::comp::ComponentLoadRequest luascript{{boyd::comp::ComponentLoadRequest::TypeOf<boyd::comp::LuaBehaviour>(),
-                                                "scripts/main.lua"}};
-
+                                                boyd::MAIN_SCRIPT}};
     registry.assign<boyd::comp::ComponentLoadRequest>(root, std::move(luascript));
 
     auto testCube = registry.create();
@@ -171,7 +170,7 @@ BOYD_API void BoydUpdate_Scripting(void *statePtr)
     {
         BOYD_LOG(Info, "Detected new script in ECS, building");
         auto &comp = registry.get<boyd::comp::LuaBehaviour>(entity);
-        auto &internal = registry.assign_or_replace<boyd::comp::LuaInternals>(entity, comp, state->L, entity);
+        registry.assign<boyd::comp::LuaInternals>(entity, comp, state->L, entity);
     }
 
     state->observer.clear();

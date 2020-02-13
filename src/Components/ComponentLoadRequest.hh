@@ -54,17 +54,25 @@ struct Registrar<comp::ComponentLoadRequest, TRegister>
 {
     static constexpr const char *TYPENAME = "ComponentLoadRequest";
 
-    static comp::ComponentLoadRequest Add(comp::ComponentLoadRequest *self, std::string asset, ENTT_ID_TYPE typeId)
+    static void Add(comp::ComponentLoadRequest *self, unsigned typeId, std::string asset)
     {
-        return comp::ComponentLoadRequest{{typeId, asset}};
+        self->requests.insert({typeId, asset});
+    }
+
+    static std::string ToString(const comp::ComponentLoadRequest *self)
+    {
+        return "ComponentLoadRequest";
     }
 
     static TRegister Register(TRegister &reg)
     {
+        // clang-format off
         return reg.template beginClass<comp::ComponentLoadRequest>(TYPENAME)
             .template addConstructor<void (*)(void)>()
             .addFunction("add", Add)
-            .endClass();
+            .addFunction("__tostring", ToString)
+        .endClass();
+        // clang-format on
     }
 };
 
