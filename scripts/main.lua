@@ -27,12 +27,23 @@ local cameraComp = ent:comp('Camera')
 local activeCamera = boyd.ActiveCamera()
 local activeCameraComp = ent:comp('ActiveCamera')
 
+
+local ent2 = boyd.entity.create()
+print('testing scripts')
+local luabehaviour_comp = ent2:comp('LuaBehaviour')
+local component_load_request_comp = ent2:comp('ComponentLoadRequest')
+local component = boyd.ComponentLoadRequest()
+component:add(luabehaviour_comp.id, "scripts/test.lua")
+component_load_request_comp:set(component)
+
+print("Done")
+
+
 cameraComp:set(camera)
 activeCameraComp:set(activeCamera)
 
 local yaw = 0.0
 local pitch = 0.0
-
 
 -- A hack to get a clone of the transform
 local newCamera = transf:translated(boyd.frame.zero)
