@@ -64,8 +64,15 @@ struct BOYD_API LuaInternals
             // set the upvalue (_ENV)
             lua_setupvalue(L, 1, 1);
 
-            PushGlobals(L);
-            lua_pcall(L, 0, LUA_MULTRET, 0);
+            // PushGlobals(L);
+            try
+            {
+                lua_call(L, 0, 0);
+            }
+            catch(luabridge::LuaException &e)
+            {
+                BOYD_LOG(Error, "{}", e.what());
+            }
 
             break;
         case LUA_ERRSYNTAX:
@@ -96,7 +103,7 @@ struct BOYD_API LuaInternals
         if(sleepAmount > milliseconds::zero())
             return;
 
-        PushGlobals(L);
+        //PushGlobals(L);
 
         /// Try to call the update function, if any. Catch any error.
         try
@@ -105,7 +112,11 @@ struct BOYD_API LuaInternals
             lua_getfield(L, -1, UPDATE_FUNC_NAME);
             if(lua_isnil(L, -1))
             {
-                BOYD_LOG(Debug, "This is NIL!");
+                lua_Debug debug;
+                lua_getstack(L, 1, &debug);
+                lua_getinfo(L, "Sl", &debug);
+
+                //__builtin_trap();
             }
 #ifdef BOYD_LUA_JIT
             switch(::lua_resume(L, 0))

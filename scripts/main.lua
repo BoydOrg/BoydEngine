@@ -31,9 +31,12 @@ local activeCameraComp = ent:comp('ActiveCamera')
 local ent2 = boyd.entity.create()
 print('testing scripts')
 local luabehaviour_comp = ent2:comp('LuaBehaviour')
+print("Before it's done")
 local component_load_request_comp = ent2:comp('ComponentLoadRequest')
+print("Before it's done")
 local component = boyd.ComponentLoadRequest()
-component:add(luabehaviour_comp.id, "scripts/test.lua")
+print("Before it's done")
+component:add(luabehaviour_comp.id(), "scripts/test.lua")
 component_load_request_comp:set(component)
 
 print("Done")
@@ -49,6 +52,7 @@ local pitch = 0.0
 local newCamera = transf:translated(boyd.frame.zero)
 
 function update()
+    print("From update")
     xoffset = boyd.input.get_axis(0)
     yoffset = boyd.input.get_axis(1)
 
