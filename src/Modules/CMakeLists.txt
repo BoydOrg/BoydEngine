@@ -60,6 +60,7 @@ macro(boyd_module)
         EnTT::EnTT
         fmt::fmt
         BoydThreads
+        par
     )
 
     if (BOYD_HOT_RELOADING)
@@ -101,7 +102,7 @@ boyd_module(NAME Audio PRIORITY 20
 
 boyd_module(NAME Gfx PRIORITY 99
     SOURCES Gfx/Gfx.cc Gfx/Input.cc Gfx/GL3/GL3.cc Gfx/GL3/GL3Pipeline.cc
-    LINKS glfw flextGL BoydOpenGL
+    LINKS glfw flextGL BoydOpenGL par
 )
 
 # ------------------------------------------------------------------------------

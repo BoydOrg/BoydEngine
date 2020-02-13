@@ -11,6 +11,10 @@ add_subdirectory(entt/)
 # fmtlib - https://github.com/fmtlib/fmt - License: modified MIT
 add_subdirectory(fmt/)
 
+# par_shapes.h - https://github.com/prideout/par - License: MIT
+add_library(par INTERFACE)
+target_include_directories(par INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/par/")
+
 # LuaBridge - https://github.com/vinniefalco/LuaBridge - License: modified MIT
 set(LUABRIDGE_TESTING OFF CACHE BOOL "" FORCE)
 add_subdirectory(luabridge/)
